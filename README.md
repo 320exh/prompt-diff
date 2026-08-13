@@ -5,6 +5,7 @@
 [![CI](https://github.com/320exh/prompt-diff/actions/workflows/ci.yml/badge.svg)](https://github.com/320exh/prompt-diff/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Homebrew tap](https://img.shields.io/badge/homebrew-320exh%2Fprompt--diff-orange.svg)](https://github.com/320exh/homebrew-prompt-diff)
 
 ---
 
@@ -41,18 +42,19 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 
 ### Installation
 
-#### Using Homebrew (macOS)
+#### Using Homebrew (macOS & Linux)
+Prebuilt binaries via the [`320exh/homebrew-prompt-diff`](https://github.com/320exh/homebrew-prompt-diff) tap:
 ```bash
 brew install 320exh/prompt-diff/prompt-diff
 ```
 
-#### Pre-built binary (Linux)
+#### Pre-built binary (Linux, without Homebrew)
 Download `prompt-diff-linux-amd64` or `prompt-diff-linux-arm64` from the [latest release](https://github.com/320exh/prompt-diff/releases/latest), then:
 ```bash
 chmod +x prompt-diff-linux-* && sudo mv prompt-diff-linux-* /usr/local/bin/prompt-diff
 ```
 
-#### Using Go
+#### Using Go (Windows, or any platform)
 ```bash
 go install github.com/320exh/prompt-diff@latest
 ```
