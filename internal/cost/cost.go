@@ -15,6 +15,11 @@ type Price struct {
 	Per1M float64
 }
 
+// PricesAsOf is the date the built-in price table was last updated. Bump it
+// whenever prices map changes so `prompt-diff models --check` can warn when
+// it goes stale.
+const PricesAsOf = "2026-08-13"
+
 var prices = map[string]float64{
 	// OpenAI
 	"gpt-5":           1.25,
@@ -62,6 +67,17 @@ var overrides = map[string]float64{}
 // SetOverride pins model's price, overriding the built-in list.
 func SetOverride(model string, per1M float64) {
 	overrides[strings.ToLower(model)] = per1M
+}
+
+// IsKnown reports whether model has an exact or override entry in the price
+// table (as opposed to falling back to a prefix or family-default guess).
+func IsKnown(model string) bool {
+	lower := strings.ToLower(model)
+	if _, ok := overrides[lower]; ok {
+		return true
+	}
+	_, ok := prices[lower]
+	return ok
 }
 
 // Lookup returns the USD per-1M-token price for a model.

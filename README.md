@@ -194,13 +194,22 @@ Return JSON with classification and confidence score.
 - [x] `prompt-diff diff --json` for CI-friendly output
 - [x] `.prompt-diff.yml` config file for price overrides
 - [x] Rate-limit/5xx retry with backoff in eval providers
-- [ ] GitHub Action integration (`prompt-diff-action`) for PR regression checks
+- [x] GitHub Action integration (`.github/actions/diff-comment`) for PR regression checks
+- [x] `prompt-diff lint` — static checks (undeclared/unused vars, missing frontmatter, unknown models), zero API cost
+- [x] `prompt-diff models --check` — cost table staleness guard
+- [x] `prompt-diff diff a.prompt b.prompt` — compare two files directly, no git ref needed
+- [x] `prompt-diff runs compare <id1> <id2>` — pass-rate/total delta between two stored eval runs
+- [x] `prompt-diff hook install` — git pre-commit hook for staged `.prompt` files, optional `--max-delta` gate
 - [ ] Automated prompt optimization & auto-compressor node
 - [ ] Export benchmark reports to markdown/PDF
 - [ ] Native integration with LangChain & LlamaIndex template schemas
 - [ ] Windows package manager (Scoop/winget) — needs a new tap-style repo + secret, deferred
 - [ ] Eval-run history & side-by-side comparison view in the dashboard
 - [ ] `prompt-diff init` scaffold command
+- [ ] Semantic diff via embeddings (`--semantic`) — deferred: no embedding provider is wired yet (Anthropic has none; would need Voyage/OpenAI as a new dependency)
+- [ ] Eval assertions/graders (contains/regex/json-schema/llm-judge) — deferred: needs an eval-suite schema change, doing it well is bigger than a bundle-in
+- [ ] Prompt-caching cost awareness — deferred: needs correct per-provider cache-discount math, risk of shipping wrong numbers
+- [ ] `--parallel N` worker pool + rate limiting for eval — deferred: real infra work (backpressure, per-provider limits), not a quick add
 
 ---
 

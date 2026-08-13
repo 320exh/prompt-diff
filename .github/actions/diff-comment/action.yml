@@ -1,0 +1,91 @@
+name: prompt-diff PR comment
+description: >
+  Run "prompt-diff diff --json" for a .prompt file against the PR's base ref
+  and post the token/cost delta as a sticky PR comment (edited in place on
+  subsequent pushes rather than duplicated).
+inputs:
+  prompt:
+    description: Path to the .prompt file to diff
+    required: true
+  base-ref:
+    description: Git ref to diff against (defaults to the PR base branch)
+    required: false
+    default: ${{ github.event.pull_request.base.sha }}
+  version:
+    description: prompt-diff release version to install (e.g. v1.1.2); defaults to latest
+    required: false
+    default: latest
+  github-token:
+    description: Token used to post/update the PR comment
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - name: Install prompt-diff
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        if [ "$VERSION" = "latest" ]; then
+          url=$(curl -fsSL https://api.github.com/repos/320exh/prompt-diff/releases/latest \
+            | grep -o '"browser_download_url": *"[^"]*prompt-diff-linux-amd64"' \
+            | cut -d'"' -f4)
+        else
+          url="https://github.com/320exh/prompt-diff/releases/download/${VERSION}/prompt-diff-linux-amd64"
+        fi
+        curl -fsSL "$url" -o /usr/local/bin/prompt-diff
+        chmod +x /usr/local/bin/prompt-diff
+
+    - name: Run prompt-diff
+      shell: bash
+      id: diff
+      env:
+        PROMPT: ${{ inputs.prompt }}
+        BASE_REF: ${{ inputs.base-ref }}
+      run: |
+        set -euo pipefail
+        git fetch origin "$BASE_REF" --depth=1 || true
+        prompt-diff diff "$PROMPT" --v1="$BASE_REF" --v2=WORKING > diff.txt || true
+        {
+          echo 'body<<PROMPT_DIFF_EOF'
+          echo "### prompt-diff: \`$PROMPT\`"
+          echo '```'
+          cat diff.txt
+          echo '```'
+          echo 'PROMPT_DIFF_EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Post sticky PR comment
+      uses: actions/github-script@v7
+      if: ${{ github.event.pull_request }}
+      env:
+        BODY: ${{ steps.diff.outputs.body }}
+        PROMPT: ${{ inputs.prompt }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const marker = `<!-- prompt-diff:${process.env.PROMPT} -->`;
+          const body = `${marker}\n${process.env.BODY}`;
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          const existing = comments.find(c => c.body && c.body.startsWith(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }

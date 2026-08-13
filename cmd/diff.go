@@ -19,14 +19,16 @@ var (
 )
 
 var diffCmd = &cobra.Command{
-	Use:   "diff <file.prompt>",
-	Short: "Diff a .prompt template against a git revision",
-	Long: `Compare a .prompt template against another revision (default HEAD).
+	Use:   "diff <file.prompt> [file2.prompt]",
+	Short: "Diff a .prompt template against a git revision or another file",
+	Long: `Compare a .prompt template against another revision (default HEAD), or
+against a second file on disk when given two paths.
 
 Examples:
   prompt-diff diff system_prompt_example.prompt
-  prompt-diff diff system_prompt_example.prompt --v1=v1.2.0 --v2=HEAD`,
-	Args: cobra.ExactArgs(1),
+  prompt-diff diff system_prompt_example.prompt --v1=v1.2.0 --v2=HEAD
+  prompt-diff diff a.prompt b.prompt`,
+	Args: cobra.RangeArgs(1, 2),
 	RunE: runDiff,
 }
 
@@ -38,6 +40,29 @@ func init() {
 
 func runDiff(cmd *cobra.Command, args []string) error {
 	path := args[0]
+
+	// Two-file form: `prompt-diff diff a.prompt b.prompt` compares two files
+	// on disk directly, bypassing git refs entirely.
+	if len(args) == 2 {
+		path2 := args[1]
+		oldSrc, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", path, err)
+		}
+		newSrc, err := os.ReadFile(path2)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", path2, err)
+		}
+		oldP, err := prompt.Parse(oldSrc)
+		if err != nil {
+			return fmt.Errorf("parsing %s: %w", path, err)
+		}
+		newP, err := prompt.Parse(newSrc)
+		if err != nil {
+			return fmt.Errorf("parsing %s: %w", path2, err)
+		}
+		return printDiff(path2, oldP, newP)
+	}
 
 	oldSrc, err := promptAtRef(path, diffV1)
 	if err != nil {
@@ -56,7 +81,10 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("parsing %s at %q: %w", path, displayRef(diffV2), err)
 	}
+	return printDiff(path, oldP, newP)
+}
 
+func printDiff(path string, oldP, newP *prompt.Template) error {
 	d := promptdiff.Compare(oldP, newP)
 
 	if diffJSON {
