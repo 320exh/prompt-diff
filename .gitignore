@@ -1,9 +1,20 @@
+## Dependencies
 node_modules/
 web/node_modules/
+
+## Build artifacts
 prompt-diff
 prompt-diff.exe
 *.exe
 report.html
+internal/uiserver/dist/
+
+## Web dev scrap
+web/ui/
+
+## Scratch / transient
+raw-idea-*.txt
+raw-notes/
 *.log
 .DS_Store
 runs.db
