@@ -22,8 +22,8 @@ var diffCmd = &cobra.Command{
 	Long: `Compare a .prompt template against another revision (default HEAD).
 
 Examples:
-  prompt-diff diff system_prompt.prompt
-  prompt-diff diff system_prompt.prompt --v1=v1.2.0 --v2=HEAD`,
+  prompt-diff diff system_prompt_example.prompt
+  prompt-diff diff system_prompt_example.prompt --v1=v1.2.0 --v2=HEAD`,
 	Args: cobra.ExactArgs(1),
 	RunE: runDiff,
 }

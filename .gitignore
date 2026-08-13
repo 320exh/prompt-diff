@@ -7,14 +7,8 @@ prompt-diff
 prompt-diff.exe
 *.exe
 report.html
-internal/uiserver/dist/
-
-## Web dev scrap
-web/ui/
 
 ## Scratch / transient
-raw-idea-*.txt
-raw-notes/
 *.log
 .DS_Store
 runs.db

@@ -73,7 +73,7 @@ Compare your current prompt draft against `HEAD` or a specific branch/commit:
 
 ```bash
 # Compare local working prompt against HEAD
-prompt-diff diff system_prompt.prompt
+prompt-diff diff system_prompt_example.prompt
 
 # Compare against a specific commit or tag
 prompt-diff diff prompts/agent_v2.prompt --v1=v1.2.0 --v2=HEAD
