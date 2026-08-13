@@ -8,6 +8,9 @@ prompt-diff.exe
 *.exe
 report.html
 
+## Local-only notes
+CLAUDE.md
+
 ## Scratch / transient
 *.log
 .DS_Store

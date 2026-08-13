@@ -1,0 +1,121 @@
+name: Release
+
+# Pushing a tag like v1.2.3 does the whole release + Homebrew sync in one go:
+#   1. build darwin-arm64 / darwin-amd64 binaries
+#   2. publish a GitHub Release with those binaries attached
+#   3. push an updated formula to 320exh/homebrew-prompt-diff
+#
+# Requires a repo secret HOMEBREW_TAP_TOKEN: a PAT (classic or fine-grained)
+# with `contents: write` on 320exh/homebrew-prompt-diff. The default
+# GITHUB_TOKEN can't push to a different repo.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build embedded dashboard
+        run: |
+          npm --prefix web ci
+          npm --prefix web run build
+
+      - name: Fail if embedded dist is stale
+        run: |
+          if ! git diff --quiet -- internal/uiserver/dist; then
+            echo "::error::internal/uiserver/dist is out of date for this tag. Rebuild and commit before tagging."
+            exit 1
+          fi
+
+      - name: Derive version
+        id: ver
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release binaries
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist
+          GOOS=darwin GOARCH=arm64 go build -o dist/prompt-diff-darwin-arm64 -ldflags "-X github.com/320exh/prompt-diff/cmd.Version=${{ steps.ver.outputs.tag }}" .
+          GOOS=darwin GOARCH=amd64 go build -o dist/prompt-diff-darwin-amd64 -ldflags "-X github.com/320exh/prompt-diff/cmd.Version=${{ steps.ver.outputs.tag }}" .
+
+      - name: Checksums
+        id: sha
+        run: |
+          echo "arm64=$(sha256sum dist/prompt-diff-darwin-arm64 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "amd64=$(sha256sum dist/prompt-diff-darwin-amd64 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.ver.outputs.tag }}" \
+            dist/prompt-diff-darwin-arm64 \
+            dist/prompt-diff-darwin-amd64 \
+            --title "${{ steps.ver.outputs.tag }}" \
+            --generate-notes
+
+      - name: Update Homebrew tap
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::HOMEBREW_TAP_TOKEN secret is not set — cannot push formula update. Release binaries were still published."
+            exit 1
+          fi
+
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/320exh/homebrew-prompt-diff.git" tap
+          cd tap
+
+          version="${{ steps.ver.outputs.version }}"
+          tag="${{ steps.ver.outputs.tag }}"
+          arm64_sha="${{ steps.sha.outputs.arm64 }}"
+          amd64_sha="${{ steps.sha.outputs.amd64 }}"
+
+          sed -i \
+            -e "s|version \".*\"|version \"${version}\"|" \
+            -e "s|releases/download/v[^/]*/prompt-diff-darwin-arm64|releases/download/${tag}/prompt-diff-darwin-arm64|" \
+            -e "s|releases/download/v[^/]*/prompt-diff-darwin-amd64|releases/download/${tag}/prompt-diff-darwin-amd64|" \
+            -e "0,/sha256 \"/s|sha256 \"[a-f0-9]*\"|sha256 \"${arm64_sha}\"|" \
+            prompt-diff.rb
+
+          # second sha256 occurrence is the amd64 line; do it as a follow-up pass
+          awk -v sha="$amd64_sha" '
+            /sha256 "/ { n++; if (n == 2) { sub(/sha256 "[a-f0-9]*"/, "sha256 \"" sha "\""); } }
+            { print }
+          ' prompt-diff.rb > prompt-diff.rb.tmp && mv prompt-diff.rb.tmp prompt-diff.rb
+
+          sed -i -e "s|assert_match \"v[^\"]*\"|assert_match \"${tag}\"|" prompt-diff.rb
+
+          if git diff --quiet; then
+            echo "Formula already up to date; nothing to commit."
+            exit 0
+          fi
+
+          git config user.name "prompt-diff-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add prompt-diff.rb
+          git commit -m "chore: sync formula to ${tag}"
+          git push origin HEAD:main
