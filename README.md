@@ -22,7 +22,7 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 - ⚙️ **Git-Native Prompt Tracking**: Automatically parses `.prompt` templates, identifies template variable injections, and tracks structural evolution across commits.
 - 📊 **Semantic & Token Diffing**: Visualizes added/deleted tokens in your terminal and calculates immediate cost impact projections per 1,000 invocations.
 - 🧪 **Batch Evaluation Harness**: Runs test matrices across local (Ollama) and OpenAI models, with clean stubs for Anthropic and Gemini until v2.
-- 🖥️ **Zero-Config Local Workspace**: Spin up an embedded local web dashboard (`prompt-diff ui`) to tweak variables and compare side-by-side model outputs in real time.
+- 🖥️ **Zero-Config Local Workspace**: Spin up an embedded local web dashboard (`prompt-diff ui`) to tweak variables and compare side-by-side model outputs in real time. Running the binary with no arguments (or double-clicking it on Windows) launches the dashboard directly.
 - 📦 **Single-Binary Zero Setup**: Compiles into a single self-contained binary with zero external runtime dependencies.
 
 ---
@@ -55,7 +55,7 @@ chmod +x prompt-diff-linux-* && sudo mv prompt-diff-linux-* /usr/local/bin/promp
 ```
 
 #### Pre-built binary (Windows)
-Download `prompt-diff-windows-amd64.exe` or `prompt-diff-windows-arm64.exe` from the [latest release](https://github.com/320exh/prompt-diff/releases/latest), then add it to your `PATH` (or run it in place).
+Download `prompt-diff-windows-amd64.exe` or `prompt-diff-windows-arm64.exe` from the [latest release](https://github.com/320exh/prompt-diff/releases/latest), then add it to your `PATH` (or run it in place). Double-clicking the `.exe` also works — it boots the dashboard directly instead of printing CLI usage.
 
 #### Using Go (any platform)
 ```bash
@@ -173,7 +173,8 @@ Return JSON with classification and confidence score.
 - [x] `prompt-diff ui` serves the zero-config local dashboard
 - [x] Published release binaries for macOS, Linux, Windows (+ Homebrew tap for macOS/Linux)
 
-**v2 (planned):**
+**v2 (in progress):**
+- [x] No-subcommand / double-click launches the dashboard directly (start of v2 GUI)
 - [ ] GitHub Action integration (`prompt-diff-action`) for PR regression checks
 - [ ] Automated prompt optimization & auto-compressor node
 - [ ] Direct Anthropic / Gemini API clients (currently clear errors)
