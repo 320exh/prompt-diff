@@ -21,7 +21,7 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 
 - ⚙️ **Git-Native Prompt Tracking**: Automatically parses `.prompt` templates, identifies template variable injections, and tracks structural evolution across commits.
 - 📊 **Semantic & Token Diffing**: Visualizes added/deleted tokens in your terminal and calculates immediate cost impact projections per 1,000 invocations.
-- 🧪 **Batch Evaluation Harness**: Runs test matrices across local (Ollama) and OpenAI models, with clean stubs for Anthropic and Gemini until v2.
+- 🧪 **Batch Evaluation Harness**: Runs test matrices across local (Ollama), OpenAI, Anthropic, and Gemini models, with `contains`/list/`$in`/`$gte`/`$lte`/`$regex`/`$schema`/`$llm_judge` assertion operators.
 - 🖥️ **Zero-Config Local Workspace**: Spin up an embedded local web dashboard (`prompt-diff ui`) to tweak variables and compare side-by-side model outputs in real time. Running the binary with no arguments (or double-clicking it on Windows) launches the dashboard directly.
 - 📦 **Single-Binary Zero Setup**: Compiles into a single self-contained binary with zero external runtime dependencies.
 
