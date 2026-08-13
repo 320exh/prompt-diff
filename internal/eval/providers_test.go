@@ -74,11 +74,54 @@ func TestAnthropicCompletionNoKey(t *testing.T) {
 	}
 }
 
-func TestAnthropicCompletionWithKeyStillStubbed(t *testing.T) {
-	fn := anthropicCompletion("http://x", "sk-real", "claude-3-5-sonnet", "sys", "user")
+func TestAnthropicCompletionSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/messages" {
+			t.Errorf("path = %s", r.URL.Path)
+		}
+		if got := r.Header.Get("x-api-key"); got != "sk-real" {
+			t.Errorf("x-api-key = %q", got)
+		}
+		if got := r.Header.Get("anthropic-version"); got == "" {
+			t.Errorf("anthropic-version header missing")
+		}
+		var req anthropicRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if req.Model != "claude-3-5-sonnet" {
+			t.Errorf("model = %s", req.Model)
+		}
+		_ = json.NewEncoder(w).Encode(anthropicResponse{
+			Content: []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			}{{Type: "text", Text: "hello from claude"}},
+		})
+	}))
+	defer srv.Close()
+
+	fn := anthropicCompletion(srv.URL, "sk-real", "claude-3-5-sonnet", "sys", "user")
+	out, err := fn(context.Background())
+	if err != nil {
+		t.Fatalf("fn: %v", err)
+	}
+	if out != "hello from claude" {
+		t.Errorf("out = %q", out)
+	}
+}
+
+func TestAnthropicCompletionAPIError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(anthropicResponse{Error: &struct {
+			Message string `json:"message"`
+		}{Message: "invalid request"}})
+	}))
+	defer srv.Close()
+
+	fn := anthropicCompletion(srv.URL, "sk-real", "claude-3-5-sonnet", "sys", "user")
 	_, err := fn(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "not yet wired") {
-		t.Errorf("err = %v, want not-yet-wired error", err)
+	if err == nil || !strings.Contains(err.Error(), "invalid request") {
+		t.Errorf("err = %v", err)
 	}
 }
 
@@ -87,6 +130,32 @@ func TestGeminiCompletionNoKey(t *testing.T) {
 	_, err := fn(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "API key") {
 		t.Errorf("err = %v, want API key error", err)
+	}
+}
+
+func TestGeminiCompletionSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/models/gemini-1.5-pro:generateContent" {
+			t.Errorf("path = %s", r.URL.Path)
+		}
+		if got := r.Header.Get("x-goog-api-key"); got != "sk-real" {
+			t.Errorf("x-goog-api-key = %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(geminiResponse{
+			Candidates: []struct {
+				Content geminiContent `json:"content"`
+			}{{Content: geminiContent{Parts: []geminiPart{{Text: "hello from gemini"}}}}},
+		})
+	}))
+	defer srv.Close()
+
+	fn := geminiCompletion(srv.URL, "sk-real", "gemini-1.5-pro", "sys", "user")
+	out, err := fn(context.Background())
+	if err != nil {
+		t.Fatalf("fn: %v", err)
+	}
+	if out != "hello from gemini" {
+		t.Errorf("out = %q", out)
 	}
 }
 

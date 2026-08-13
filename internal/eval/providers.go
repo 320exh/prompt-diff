@@ -49,26 +49,37 @@ func openAICompletion(endpoint, apiKey, model, sys, user string) provider {
 	}
 }
 
-// anthropicCompletion is provider-adapted for v1: Anthropic's Messages API is
-// reachable, but this adapter reports a clear error until a real client with
-// the ANTHROPIC_API_KEY is wired in. Local runs fail loudly instead of
-// silently guessing at a foreign payload shape.
+// anthropicCompletion targets the Anthropic Messages API directly.
 func anthropicCompletion(endpoint, apiKey, model, sys, user string) provider {
+	url := strings.TrimSuffix(endpoint, "/") + "/messages"
+	req := anthropicRequest{
+		Model:     model,
+		MaxTokens: 4096,
+		System:    sys,
+		Messages:  []anthropicMsg{{Role: "user", Content: user}},
+	}
 	return func(ctx context.Context) (string, error) {
 		if apiKey == "" || apiKey == "sk-none" {
 			return "", fmt.Errorf("Anthropic provider requires a valid API key in ANTHROPIC_API_KEY")
 		}
-		return "", fmt.Errorf("Anthropic provider: direct Messages API integration not yet wired; set ANTHROPIC_API_KEY to enable")
+		return postAnthropic(ctx, url, apiKey, req)
 	}
 }
 
-// geminiCompletion mirrors the Anthropic adapter for the Gemini API.
+// geminiCompletion targets the Gemini generateContent REST endpoint.
 func geminiCompletion(endpoint, apiKey, model, sys, user string) provider {
+	url := strings.TrimSuffix(endpoint, "/") + "/models/" + model + ":generateContent"
+	req := geminiRequest{
+		Contents: []geminiContent{{Role: "user", Parts: []geminiPart{{Text: user}}}},
+	}
+	if sys != "" {
+		req.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: sys}}}
+	}
 	return func(ctx context.Context) (string, error) {
 		if apiKey == "" || apiKey == "sk-none" {
 			return "", fmt.Errorf("Gemini provider requires a valid API key in GEMINI_API_KEY")
 		}
-		return "", fmt.Errorf("Gemini provider: direct v1beta REST integration not yet wired; set GEMINI_API_KEY to enable")
+		return postGemini(ctx, url, apiKey, req)
 	}
 }
 
@@ -138,6 +149,136 @@ func postChat(ctx context.Context, url, apiKey string, req chatRequest) (string,
 	return cr.Choices[0].Message.Content, nil
 }
 
+// Anthropic Messages API shapes: https://platform.claude.com/docs/en/api/messages
+type anthropicMsg struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type anthropicRequest struct {
+	Model     string         `json:"model"`
+	MaxTokens int            `json:"max_tokens"`
+	System    string         `json:"system,omitempty"`
+	Messages  []anthropicMsg `json:"messages"`
+}
+
+type anthropicResponse struct {
+	Content []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	} `json:"content"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+func postAnthropic(ctx context.Context, url, apiKey string, req anthropicRequest) (string, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return "", err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-api-key", apiKey)
+	httpReq.Header.Set("anthropic-version", "2023-06-01")
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(resp.Body)
+	var ar anthropicResponse
+	if err := json.Unmarshal(data, &ar); err != nil {
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("Anthropic provider error %d: %s", resp.StatusCode, truncate(string(data), 160))
+		}
+		return "", err
+	}
+	if ar.Error != nil {
+		return "", fmt.Errorf("Anthropic provider error: %s", ar.Error.Message)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Anthropic provider error %d: %s", resp.StatusCode, truncate(string(data), 160))
+	}
+	var text strings.Builder
+	for _, block := range ar.Content {
+		if block.Type == "text" {
+			text.WriteString(block.Text)
+		}
+	}
+	if text.Len() == 0 {
+		return "", fmt.Errorf("Anthropic provider returned no text content")
+	}
+	return text.String(), nil
+}
+
+// Gemini generateContent shapes: https://ai.google.dev/api/generate-content
+type geminiPart struct {
+	Text string `json:"text"`
+}
+
+type geminiContent struct {
+	Role  string       `json:"role,omitempty"`
+	Parts []geminiPart `json:"parts"`
+}
+
+type geminiRequest struct {
+	Contents          []geminiContent `json:"contents"`
+	SystemInstruction *geminiContent  `json:"systemInstruction,omitempty"`
+}
+
+type geminiResponse struct {
+	Candidates []struct {
+		Content geminiContent `json:"content"`
+	} `json:"candidates"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+func postGemini(ctx context.Context, url, apiKey string, req geminiRequest) (string, error) {
+	body, err := json.Marshal(req)
+	if err != nil {
+		return "", err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-goog-api-key", apiKey)
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(resp.Body)
+	var gr geminiResponse
+	if err := json.Unmarshal(data, &gr); err != nil {
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("Gemini provider error %d: %s", resp.StatusCode, truncate(string(data), 160))
+		}
+		return "", err
+	}
+	if gr.Error != nil {
+		return "", fmt.Errorf("Gemini provider error: %s", gr.Error.Message)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Gemini provider error %d: %s", resp.StatusCode, truncate(string(data), 160))
+	}
+	if len(gr.Candidates) == 0 || len(gr.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("Gemini provider returned no candidates")
+	}
+	var text strings.Builder
+	for _, part := range gr.Candidates[0].Content.Parts {
+		text.WriteString(part.Text)
+	}
+	return text.String(), nil
+}
+
 func sleepCtx(ctx context.Context, d time.Duration) {
 	t := time.NewTimer(d)
 	defer t.Stop()
@@ -159,6 +300,10 @@ func resolveEndpoint(providerName string) string {
 	switch providerName {
 	case "openai":
 		return envOr("OPENAI_BASE_URL", "https://api.openai.com/v1")
+	case "anthropic":
+		return envOr("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1")
+	case "gemini":
+		return envOr("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
 	default:
 		return envOr(strings.ToUpper(providerName)+"_BASE_URL", "")
 	}
