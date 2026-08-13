@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/320exh/prompt-diff/internal/browser"
+	"github.com/320exh/prompt-diff/internal/config"
+	"github.com/320exh/prompt-diff/internal/cost"
 	"github.com/320exh/prompt-diff/internal/uiserver"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +40,11 @@ diff token/cost impact across git commits, and run multi-model test matrices.`,
 
 // Execute runs the root command.
 func Execute() {
+	if cfg, err := config.Load(); err == nil {
+		for model, price := range cfg.PriceOverrides {
+			cost.SetOverride(model, price)
+		}
+	}
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -54,13 +54,26 @@ var prices = map[string]float64{
 	"ollama": 0.00,
 }
 
+// overrides holds user-supplied prices (e.g. negotiated rates, non-USD
+// conversions) that take precedence over the built-in price list. Set via
+// SetOverride, typically from a loaded config file.
+var overrides = map[string]float64{}
+
+// SetOverride pins model's price, overriding the built-in list.
+func SetOverride(model string, per1M float64) {
+	overrides[strings.ToLower(model)] = per1M
+}
+
 // Lookup returns the USD per-1M-token price for a model.
 // Unlisted models fall back to a neutral default so projections never crash.
 func Lookup(model string) float64 {
-	if p, ok := prices[strings.ToLower(model)]; ok {
+	lower := strings.ToLower(model)
+	if p, ok := overrides[lower]; ok {
 		return p
 	}
-	lower := strings.ToLower(model)
+	if p, ok := prices[lower]; ok {
+		return p
+	}
 	// prefix matches for precision variants like gpt-4o-2024-08-06
 	keys := make([]string, 0, len(prices))
 	for k := range prices {

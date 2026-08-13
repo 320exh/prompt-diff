@@ -88,6 +88,9 @@ prompt-diff diff system_prompt_example.prompt
 
 # Compare against a specific commit or tag
 prompt-diff diff prompts/agent_v2.prompt --v1=v1.2.0 --v2=HEAD
+
+# Machine-readable output, e.g. for a CI job posting a PR comment
+prompt-diff diff prompts/agent_v2.prompt --json
 ```
 
 **Terminal Output Preview:**
@@ -137,6 +140,18 @@ prompt-diff ui --port 8080
 
 ---
 
+### 4. Configuration
+
+Drop a `.prompt-diff.yml` in the repo root (or `~/.prompt-diff.yml` for a global default) to override built-in per-model pricing — useful for negotiated rates or non-USD projections:
+
+```yaml
+price_overrides:
+  gpt-4o: 2.10          # USD per 1M input tokens
+  claude-sonnet-4-5: 2.75
+```
+
+---
+
 ## 📁 `.prompt` File Format
 
 `prompt-diff` supports standard frontmatter metadata for declaring variables, model targets, and system rules:
@@ -175,11 +190,17 @@ Return JSON with classification and confidence score.
 
 **v2 (in progress):**
 - [x] No-subcommand / double-click launches the dashboard directly (start of v2 GUI)
+- [x] Direct Anthropic / Gemini API clients
+- [x] `prompt-diff diff --json` for CI-friendly output
+- [x] `.prompt-diff.yml` config file for price overrides
+- [x] Rate-limit/5xx retry with backoff in eval providers
 - [ ] GitHub Action integration (`prompt-diff-action`) for PR regression checks
 - [ ] Automated prompt optimization & auto-compressor node
-- [ ] Direct Anthropic / Gemini API clients (currently clear errors)
 - [ ] Export benchmark reports to markdown/PDF
 - [ ] Native integration with LangChain & LlamaIndex template schemas
+- [ ] Windows package manager (Scoop/winget) — needs a new tap-style repo + secret, deferred
+- [ ] Eval-run history & side-by-side comparison view in the dashboard
+- [ ] `prompt-diff init` scaffold command
 
 ---
 

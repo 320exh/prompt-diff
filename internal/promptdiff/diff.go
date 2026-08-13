@@ -13,32 +13,32 @@ import (
 
 // Diff is the result of comparing two versions of a prompt.
 type Diff struct {
-	TokenDelta    int
-	TokenPercent  float64
-	Costs         []CostLine
-	AddedSections []string
-	RemovedSections []string
-	ModifiedVars  []VarChange
-	AddedVars     []string
-	RemovedVars   []string
+	TokenDelta      int         `json:"token_delta"`
+	TokenPercent    float64     `json:"token_percent"`
+	Costs           []CostLine  `json:"costs"`
+	AddedSections   []string    `json:"added_sections,omitempty"`
+	RemovedSections []string    `json:"removed_sections,omitempty"`
+	ModifiedVars    []VarChange `json:"modified_vars,omitempty"`
+	AddedVars       []string    `json:"added_vars,omitempty"`
+	RemovedVars     []string    `json:"removed_vars,omitempty"`
 }
 
 // CostLine is one model row of the cost projection.
 type CostLine struct {
-	Model    string
-	Old      float64
-	New      float64
-	Delta    float64
+	Model string  `json:"model"`
+	Old   float64 `json:"old"`
+	New   float64 `json:"new"`
+	Delta float64 `json:"delta"`
 	// Approx is true when Model has no known BPE vocabulary, so the token
 	// counts behind Old/New/Delta are approximated with cl100k_base rather
 	// than the model's real tokenizer.
-	Approx bool
+	Approx bool `json:"approx"`
 }
 
 // VarChange records a variable that was renamed.
 type VarChange struct {
-	From string
-	To   string
+	From string `json:"from"`
+	To   string `json:"to"`
 }
 
 // Compare diffs oldP -> newP.

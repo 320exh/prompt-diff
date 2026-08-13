@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -12,8 +13,9 @@ import (
 )
 
 var (
-	diffV1 string
-	diffV2 string
+	diffV1   string
+	diffV2   string
+	diffJSON bool
 )
 
 var diffCmd = &cobra.Command{
@@ -31,6 +33,7 @@ Examples:
 func init() {
 	diffCmd.Flags().StringVar(&diffV1, "v1", "HEAD", "older revision (git ref) to compare against")
 	diffCmd.Flags().StringVar(&diffV2, "v2", "", "newer revision (git ref); empty means the working copy")
+	diffCmd.Flags().BoolVar(&diffJSON, "json", false, "print the diff as JSON instead of the human-readable report")
 }
 
 func runDiff(cmd *cobra.Command, args []string) error {
@@ -55,6 +58,17 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	}
 
 	d := promptdiff.Compare(oldP, newP)
+
+	if diffJSON {
+		out := struct {
+			Prompt string   `json:"prompt"`
+			Models []string `json:"target_models"`
+			promptdiff.Diff
+		}{Prompt: path, Models: newP.Models, Diff: d}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(out)
+	}
 
 	fmt.Printf("Prompt: %s\n", path)
 	fmt.Printf("Target Models: %s\n", strings.Join(newP.Models, ", "))

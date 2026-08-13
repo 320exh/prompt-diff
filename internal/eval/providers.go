@@ -119,15 +119,17 @@ func postChat(ctx context.Context, url, apiKey string, req chatRequest) (string,
 		return "", err
 	}
 	sleepCtx(ctx, 50*time.Millisecond)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	if apiKey != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-	}
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := doWithRetry(ctx, func() (*http.Response, error) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		if apiKey != "" {
+			httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+		return http.DefaultClient.Do(httpReq)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -177,14 +179,16 @@ func postAnthropic(ctx context.Context, url, apiKey string, req anthropicRequest
 	if err != nil {
 		return "", err
 	}
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("x-api-key", apiKey)
-	httpReq.Header.Set("anthropic-version", "2023-06-01")
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := doWithRetry(ctx, func() (*http.Response, error) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("x-api-key", apiKey)
+		httpReq.Header.Set("anthropic-version", "2023-06-01")
+		return http.DefaultClient.Do(httpReq)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -244,13 +248,15 @@ func postGemini(ctx context.Context, url, apiKey string, req geminiRequest) (str
 	if err != nil {
 		return "", err
 	}
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("x-goog-api-key", apiKey)
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := doWithRetry(ctx, func() (*http.Response, error) {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("x-goog-api-key", apiKey)
+		return http.DefaultClient.Do(httpReq)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -286,6 +292,41 @@ func sleepCtx(ctx context.Context, d time.Duration) {
 	case <-ctx.Done():
 	case <-t.C:
 	}
+}
+
+// retryableStatus reports whether an HTTP response deserves a retry:
+// 429 (rate limit) and 5xx (transient server errors).
+func retryableStatus(code int) bool {
+	return code == http.StatusTooManyRequests || code >= 500
+}
+
+// doWithRetry runs a single HTTP call up to 4 attempts, backing off
+// exponentially (500ms, 1s, 2s) between retryable failures (429/5xx or a
+// transport-level error). It returns the first non-retryable response, the
+// last response after exhausting retries, or the last transport error.
+func doWithRetry(ctx context.Context, do func() (*http.Response, error)) (*http.Response, error) {
+	const maxAttempts = 4
+	backoff := 500 * time.Millisecond
+	var resp *http.Response
+	var err error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		resp, err = do()
+		if err == nil && !retryableStatus(resp.StatusCode) {
+			return resp, nil
+		}
+		if attempt == maxAttempts {
+			break
+		}
+		if err == nil {
+			resp.Body.Close()
+		}
+		sleepCtx(ctx, backoff)
+		if ctx.Err() != nil {
+			return resp, err
+		}
+		backoff *= 2
+	}
+	return resp, err
 }
 
 func truncate(s string, n int) string {
