@@ -132,6 +132,7 @@ prompt-diff runs
 ```
 
 > The eval harness records every run in a local SQLite store (`runs.db`). See `prompt-diff runs` to list past runs.
+> In-flight provider calls are capped at 5 by default (`--concurrency N` to change) to avoid tripping rate limits on large suites.
 
 ---
 
