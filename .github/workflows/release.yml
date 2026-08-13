@@ -1,9 +1,11 @@
 name: Release
 
 # Pushing a tag like v1.2.3 does the whole release + Homebrew sync in one go:
-#   1. build darwin-arm64 / darwin-amd64 / linux-arm64 / linux-amd64 binaries
+#   1. build darwin/linux/windows binaries (arm64 + amd64 each)
 #   2. publish a GitHub Release with those binaries attached
-#   3. push an updated formula to 320exh/homebrew-prompt-diff (macOS only)
+#   3. push an updated formula to 320exh/homebrew-prompt-diff (macOS + Linux —
+#      Homebrew doesn't run on Windows, so Windows users stay on the .exe
+#      download below or `go install`)
 #
 # Requires a repo secret HOMEBREW_TAP_TOKEN: a PAT (classic or fine-grained)
 # with `contents: write` on 320exh/homebrew-prompt-diff. The default
@@ -62,6 +64,8 @@ jobs:
           GOOS=darwin GOARCH=amd64 go build -o dist/prompt-diff-darwin-amd64 -ldflags "-X github.com/320exh/prompt-diff/cmd.Version=${{ steps.ver.outputs.tag }}" .
           GOOS=linux GOARCH=arm64 go build -o dist/prompt-diff-linux-arm64 -ldflags "-X github.com/320exh/prompt-diff/cmd.Version=${{ steps.ver.outputs.tag }}" .
           GOOS=linux GOARCH=amd64 go build -o dist/prompt-diff-linux-amd64 -ldflags "-X github.com/320exh/prompt-diff/cmd.Version=${{ steps.ver.outputs.tag }}" .
+          GOOS=windows GOARCH=arm64 go build -o dist/prompt-diff-windows-arm64.exe -ldflags "-X github.com/320exh/prompt-diff/cmd.Version=${{ steps.ver.outputs.tag }}" .
+          GOOS=windows GOARCH=amd64 go build -o dist/prompt-diff-windows-amd64.exe -ldflags "-X github.com/320exh/prompt-diff/cmd.Version=${{ steps.ver.outputs.tag }}" .
 
       - name: Checksums
         id: sha
@@ -80,6 +84,8 @@ jobs:
             dist/prompt-diff-darwin-amd64 \
             dist/prompt-diff-linux-arm64 \
             dist/prompt-diff-linux-amd64 \
+            dist/prompt-diff-windows-arm64.exe \
+            dist/prompt-diff-windows-amd64.exe \
             --title "${{ steps.ver.outputs.tag }}" \
             --generate-notes
 

@@ -54,7 +54,10 @@ Download `prompt-diff-linux-amd64` or `prompt-diff-linux-arm64` from the [latest
 chmod +x prompt-diff-linux-* && sudo mv prompt-diff-linux-* /usr/local/bin/prompt-diff
 ```
 
-#### Using Go (Windows, or any platform)
+#### Pre-built binary (Windows)
+Download `prompt-diff-windows-amd64.exe` or `prompt-diff-windows-arm64.exe` from the [latest release](https://github.com/320exh/prompt-diff/releases/latest), then add it to your `PATH` (or run it in place).
+
+#### Using Go (any platform)
 ```bash
 go install github.com/320exh/prompt-diff@latest
 ```
@@ -168,7 +171,7 @@ Return JSON with classification and confidence score.
 - [x] Git-native diffing: `prompt-diff diff <file> [--v1=ref --v2=ref]`
 - [x] SQLite-backed eval history (`prompt-diff runs`)
 - [x] `prompt-diff ui` serves the zero-config local dashboard
-- [x] Homebrew tap + published release binaries (macOS, Linux)
+- [x] Published release binaries for macOS, Linux, Windows (+ Homebrew tap for macOS/Linux)
 
 **v2 (planned):**
 - [ ] GitHub Action integration (`prompt-diff-action`) for PR regression checks
