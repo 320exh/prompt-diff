@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/320exh/prompt-diff/internal/browser"
+	"github.com/320exh/prompt-diff/internal/uiserver"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +20,20 @@ tokens/costs, and benchmark LLM system prompts across local and cloud models.
 
 It treats system prompts as first-class source code: parse .prompt templates,
 diff token/cost impact across git commits, and run multi-model test matrices.`,
+	// Running with no subcommand (e.g. double-clicking the binary) launches
+	// the dashboard directly, so the tool is usable without the CLI.
+	RunE: func(cmd *cobra.Command, args []string) error {
+		srv := uiserver.New(8080)
+		ln, port, err := srv.Listen()
+		if err != nil {
+			return err
+		}
+		url := fmt.Sprintf("http://localhost:%d", port)
+		fmt.Printf("prompt-diff dashboard running at %s\n", url)
+		fmt.Println("Close this window to stop.")
+		_ = browser.Open(url)
+		return srv.ServeOn(ln)
+	},
 }
 
 // Execute runs the root command.

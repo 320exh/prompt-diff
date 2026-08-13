@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,6 +33,25 @@ func New(port int) *workspaceServer {
 // Serve starts the embedded dashboard server on the given port.
 func (s *workspaceServer) Serve() error {
 	return http.ListenAndServe(fmt.Sprintf(":%d", s.port), s.handler)
+}
+
+// Listen binds a listener for the dashboard, falling back to an OS-assigned
+// free port if the requested one is already in use. It returns the listener
+// and the port actually bound, without serving yet.
+func (s *workspaceServer) Listen() (net.Listener, int, error) {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	if err != nil {
+		ln, err = net.Listen("tcp", ":0")
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+	return ln, ln.Addr().(*net.TCPAddr).Port, nil
+}
+
+// ServeOn serves the dashboard on an already-bound listener.
+func (s *workspaceServer) ServeOn(ln net.Listener) error {
+	return http.Serve(ln, s.handler)
 }
 
 func newMux() http.Handler {
