@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	evalPrompt  string
-	evalTests   string
-	evalModels  string
-	evalOutput  string
+	evalPrompt      string
+	evalTests       string
+	evalModels      string
+	evalOutput      string
+	evalConcurrency int
 )
 
 var evalCmd = &cobra.Command{
@@ -43,6 +44,7 @@ func init() {
 	evalCmd.Flags().StringVar(&evalTests, "tests", "", "path to the eval suite JSON (required)")
 	evalCmd.Flags().StringVar(&evalModels, "models", "", "comma-separated model list (default: the prompt's frontmatter models)")
 	evalCmd.Flags().StringVar(&evalOutput, "output", "report.html", "path to write the HTML report")
+	evalCmd.Flags().IntVar(&evalConcurrency, "concurrency", eval.DefaultConcurrency, "max in-flight provider calls across all models/cases")
 	_ = evalCmd.MarkFlagRequired("prompt")
 	_ = evalCmd.MarkFlagRequired("tests")
 }
@@ -69,7 +71,7 @@ func runEval(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no models given via --models and none declared in the prompt frontmatter")
 	}
 
-	report := eval.Run(cmd.Context(), p, suite, models)
+	report := eval.RunWithConcurrency(cmd.Context(), p, suite, models, evalConcurrency)
 	if err := eval.WriteReport(evalOutput, &report); err != nil {
 		return fmt.Errorf("writing report: %w", err)
 	}

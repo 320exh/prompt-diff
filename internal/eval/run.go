@@ -13,8 +13,26 @@ import (
 	"github.com/320exh/prompt-diff/internal/prompt"
 )
 
-// Run executes a suite against each model concurrently and scores results.
+// DefaultConcurrency caps in-flight provider calls when the caller doesn't
+// specify one (0 or negative) via RunWithConcurrency.
+const DefaultConcurrency = 5
+
+// Run executes a suite against each model concurrently and scores results,
+// using DefaultConcurrency in-flight calls at a time.
 func Run(ctx context.Context, p *prompt.Template, suite *Suite, models []string) Report {
+	return RunWithConcurrency(ctx, p, suite, models, DefaultConcurrency)
+}
+
+// RunWithConcurrency is Run with an explicit cap on in-flight provider calls
+// across all models/cases. Unbounded fan-out (one goroutine per model x case)
+// hammers provider rate limits on large suites even with per-call retry, so
+// callers should keep this at or below what their API keys' tiers allow.
+func RunWithConcurrency(ctx context.Context, p *prompt.Template, suite *Suite, models []string, concurrency int) Report {
+	if concurrency <= 0 {
+		concurrency = DefaultConcurrency
+	}
+	sem := make(chan struct{}, concurrency)
+
 	var mu sync.Mutex
 	results := []Cell{}
 	failed := 0
@@ -27,6 +45,8 @@ func Run(ctx context.Context, p *prompt.Template, suite *Suite, models []string)
 			wg.Add(1)
 			go func(ci int) {
 				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
 				start := time.Now()
 				out := callProvider(ctx, m, p.Body, suite.Cases[ci].Input)
 				cell := Cell{
