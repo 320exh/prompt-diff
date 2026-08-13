@@ -117,12 +117,20 @@ func printDiff(path string, oldP, newP *prompt.Template, semantic bool) error {
 	}
 	fmt.Printf("Token Delta: %+d tokens (%+.1f%%)\n", d.TokenDelta, d.TokenPercent)
 	fmt.Println("Cost Projection (100k invocations):")
+	anyCached := false
 	for _, c := range d.Costs {
 		warn := ""
 		if c.Approx {
 			warn = "  (~approx tokenizer, no published BPE vocab for this model)"
 		}
 		fmt.Printf("  - %-19s $%.2f -> $%.2f (+$%.2f)%s\n", c.Model+":", c.Old, c.New, c.Delta, warn)
+		if c.CacheSupported {
+			anyCached = true
+			fmt.Printf("      with prompt caching: $%.2f -> $%.2f (+$%.2f)\n", c.CachedOld, c.CachedNew, c.CachedDelta)
+		}
+	}
+	if anyCached {
+		fmt.Println("    (caching assumes the whole prompt is cached: 1st call pays the cache-write price, the other 99,999 pay the cache-read price; models without a modeled discount are omitted)")
 	}
 
 	if len(d.AddedSections)+len(d.RemovedSections)+len(d.ModifiedVars)+len(d.AddedVars)+len(d.RemovedVars) > 0 {

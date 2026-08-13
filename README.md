@@ -106,7 +106,10 @@ Semantic Similarity: 0.947 (cosine, Voyage AI embeddings)
 Token Delta: +142 tokens (+18.4%)
 Cost Projection (100k invocations):
   - gpt-4o:            $0.35 -> $0.41 (+$0.06)
+      with prompt caching: $0.18 -> $0.21 (+$0.03)
   - claude-3-5-sonnet:  $0.42 -> $0.50 (+$0.08)
+      with prompt caching: $0.04 -> $0.05 (+$0.01)
+    (caching assumes the whole prompt is cached: 1st call pays the cache-write price, the other 99,999 pay the cache-read price; models without a modeled discount are omitted)
 
 Structural Diffs:
   + Added section: [Output Constraints]

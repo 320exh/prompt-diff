@@ -38,6 +38,18 @@ type CostLine struct {
 	// counts behind Old/New/Delta are approximated with cl100k_base rather
 	// than the model's real tokenizer.
 	Approx bool `json:"approx"`
+	// CacheSupported is true when Model's provider family has a modeled
+	// prompt-caching discount (see internal/cost.IsCacheSupported). When
+	// false, CachedOld/CachedNew/CachedDelta are zero and should be ignored
+	// rather than read as "no savings".
+	CacheSupported bool `json:"cache_supported"`
+	// CachedOld/CachedNew/CachedDelta project cost the same way as
+	// Old/New/Delta, but assume the whole prompt is cached: the first of the
+	// 100k invocations pays the provider's cache-write price, the rest pay
+	// the cheaper cache-read price. Only meaningful when CacheSupported.
+	CachedOld   float64 `json:"cached_old,omitempty"`
+	CachedNew   float64 `json:"cached_new,omitempty"`
+	CachedDelta float64 `json:"cached_delta,omitempty"`
 }
 
 // VarChange records a variable that was renamed.
@@ -66,13 +78,22 @@ func Compare(oldP, newP *prompt.Template) Diff {
 		mNewToks, _ := tokenizer.CountForModel(m, newP.Body)
 		oldCost := cost.EstimateBulk(m, int64(mOldToks), invocations)
 		newCost := cost.EstimateBulk(m, int64(mNewToks), invocations)
-		d.Costs = append(d.Costs, CostLine{
-			Model:  m,
-			Old:    round2(oldCost),
-			New:    round2(newCost),
-			Delta:  round2(newCost - oldCost),
-			Approx: !exact,
-		})
+		oldCached, cacheSupported := cost.EstimateBulkCached(m, int64(mOldToks), invocations)
+		newCached, _ := cost.EstimateBulkCached(m, int64(mNewToks), invocations)
+		line := CostLine{
+			Model:          m,
+			Old:            round2(oldCost),
+			New:            round2(newCost),
+			Delta:          round2(newCost - oldCost),
+			Approx:         !exact,
+			CacheSupported: cacheSupported,
+		}
+		if cacheSupported {
+			line.CachedOld = round2(oldCached)
+			line.CachedNew = round2(newCached)
+			line.CachedDelta = round2(newCached - oldCached)
+		}
+		d.Costs = append(d.Costs, line)
 	}
 
 	// Structural diff on sections.

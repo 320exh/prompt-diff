@@ -139,3 +139,68 @@ func Estimate(model string, count int) Estimated {
 func EstimateBulk(model string, count, invocations int64) float64 {
 	return Estimate(model, int(count)).Cost * float64(invocations)
 }
+
+// cacheMultiplier holds a provider family's published prompt-caching
+// discount: Write applies to the first invocation (cache miss, plus the
+// provider's cache-write premium where one exists), Read applies to every
+// subsequent invocation (cache hit).
+//
+// Sources (list prices, checked 2026-08-13):
+//   - Anthropic: cache writes cost 1.25x the base input price (5-minute TTL),
+//     cache reads cost 0.1x. https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
+//   - OpenAI: cached input tokens are billed at 0.5x the base input price,
+//     with no separate write premium (caching is automatic).
+//     https://platform.openai.com/docs/guides/prompt-caching
+//
+// Gemini and any other family are deliberately left unmodeled: Gemini's
+// caching has a separate hourly storage fee that this per-token model can't
+// represent without risking a misleading number, so IsCacheSupported returns
+// false for it rather than guessing.
+type cacheMultiplier struct {
+	Write float64
+	Read  float64
+}
+
+var cacheMultipliers = map[string]cacheMultiplier{
+	"claude": {Write: 1.25, Read: 0.1},
+	"gpt":    {Write: 1.0, Read: 0.5},
+	"o1":     {Write: 1.0, Read: 0.5},
+	"o3":     {Write: 1.0, Read: 0.5},
+	"o4":     {Write: 1.0, Read: 0.5},
+}
+
+// familyCacheMultiplier returns the cache pricing multipliers for model's
+// provider family, and whether caching is modeled for it at all.
+func familyCacheMultiplier(model string) (cacheMultiplier, bool) {
+	lower := strings.ToLower(model)
+	for prefix, m := range cacheMultipliers {
+		if strings.HasPrefix(lower, prefix) {
+			return m, true
+		}
+	}
+	return cacheMultiplier{}, false
+}
+
+// IsCacheSupported reports whether prompt-caching cost is modeled for model's
+// provider family (see cacheMultipliers doc comment for why some are excluded).
+func IsCacheSupported(model string) bool {
+	_, ok := familyCacheMultiplier(model)
+	return ok
+}
+
+// EstimateBulkCached computes the cost to run count prompt tokens across
+// invocations calls, assuming the whole prompt is cached: the first call
+// pays the cache-write price, every subsequent call pays the cheaper
+// cache-read price. Returns (0, false) when model's family has no modeled
+// caching discount — callers should treat that as "not applicable", not
+// "free".
+func EstimateBulkCached(model string, count, invocations int64) (float64, bool) {
+	mult, ok := familyCacheMultiplier(model)
+	if !ok || invocations <= 0 {
+		return 0, ok
+	}
+	per1M := Lookup(model)
+	base := float64(count) / 1_000_000 * per1M
+	total := base*mult.Write + base*mult.Read*float64(invocations-1)
+	return total, true
+}
