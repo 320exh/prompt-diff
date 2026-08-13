@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/320exh/prompt-diff/internal/embed"
 	"github.com/320exh/prompt-diff/internal/gitutil"
 	"github.com/320exh/prompt-diff/internal/prompt"
 	"github.com/320exh/prompt-diff/internal/promptdiff"
@@ -13,9 +15,10 @@ import (
 )
 
 var (
-	diffV1   string
-	diffV2   string
-	diffJSON bool
+	diffV1       string
+	diffV2       string
+	diffJSON     bool
+	diffSemantic bool
 )
 
 var diffCmd = &cobra.Command{
@@ -36,6 +39,7 @@ func init() {
 	diffCmd.Flags().StringVar(&diffV1, "v1", "HEAD", "older revision (git ref) to compare against")
 	diffCmd.Flags().StringVar(&diffV2, "v2", "", "newer revision (git ref); empty means the working copy")
 	diffCmd.Flags().BoolVar(&diffJSON, "json", false, "print the diff as JSON instead of the human-readable report")
+	diffCmd.Flags().BoolVar(&diffSemantic, "semantic", false, "also compute semantic similarity via Voyage AI embeddings (requires VOYAGE_API_KEY)")
 }
 
 func runDiff(cmd *cobra.Command, args []string) error {
@@ -61,7 +65,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("parsing %s: %w", path2, err)
 		}
-		return printDiff(path2, oldP, newP)
+		return printDiff(path2, oldP, newP, diffSemantic)
 	}
 
 	oldSrc, err := promptAtRef(path, diffV1)
@@ -81,11 +85,18 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("parsing %s at %q: %w", path, displayRef(diffV2), err)
 	}
-	return printDiff(path, oldP, newP)
+	return printDiff(path, oldP, newP, diffSemantic)
 }
 
-func printDiff(path string, oldP, newP *prompt.Template) error {
+func printDiff(path string, oldP, newP *prompt.Template, semantic bool) error {
 	d := promptdiff.Compare(oldP, newP)
+
+	if semantic {
+		client := embed.NewVoyageClient()
+		if err := promptdiff.ApplySemantic(context.Background(), &d, client, oldP, newP); err != nil {
+			return fmt.Errorf("semantic diff: %w", err)
+		}
+	}
 
 	if diffJSON {
 		out := struct {
@@ -101,6 +112,9 @@ func printDiff(path string, oldP, newP *prompt.Template) error {
 	fmt.Printf("Prompt: %s\n", path)
 	fmt.Printf("Target Models: %s\n", strings.Join(newP.Models, ", "))
 	fmt.Println()
+	if d.SemanticSimilarity != nil {
+		fmt.Printf("Semantic Similarity: %.3f (cosine, Voyage AI embeddings)\n", *d.SemanticSimilarity)
+	}
 	fmt.Printf("Token Delta: %+d tokens (%+.1f%%)\n", d.TokenDelta, d.TokenPercent)
 	fmt.Println("Cost Projection (100k invocations):")
 	for _, c := range d.Costs {

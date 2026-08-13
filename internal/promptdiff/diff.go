@@ -3,10 +3,12 @@
 package promptdiff
 
 import (
+	"context"
 	"math"
 	"strings"
 
 	"github.com/320exh/prompt-diff/internal/cost"
+	"github.com/320exh/prompt-diff/internal/embed"
 	"github.com/320exh/prompt-diff/internal/prompt"
 	"github.com/320exh/prompt-diff/internal/tokenizer"
 )
@@ -21,6 +23,9 @@ type Diff struct {
 	ModifiedVars    []VarChange `json:"modified_vars,omitempty"`
 	AddedVars       []string    `json:"added_vars,omitempty"`
 	RemovedVars     []string    `json:"removed_vars,omitempty"`
+	// SemanticSimilarity is the cosine similarity, in [-1, 1], between the
+	// old and new prompt body embeddings. Nil unless semantic diffing ran.
+	SemanticSimilarity *float64 `json:"semantic_similarity,omitempty"`
 }
 
 // CostLine is one model row of the cost projection.
@@ -122,6 +127,18 @@ func Compare(oldP, newP *prompt.Template) Diff {
 		}
 	}
 	return d
+}
+
+// ApplySemantic embeds oldP.Body and newP.Body with client and sets
+// d.SemanticSimilarity to their cosine similarity.
+func ApplySemantic(ctx context.Context, d *Diff, client embed.Client, oldP, newP *prompt.Template) error {
+	vecs, err := client.Embed(ctx, []string{oldP.Body, newP.Body})
+	if err != nil {
+		return err
+	}
+	sim := embed.CosineSimilarity(vecs[0], vecs[1])
+	d.SemanticSimilarity = &sim
+	return nil
 }
 
 func round2(f float64) float64 {

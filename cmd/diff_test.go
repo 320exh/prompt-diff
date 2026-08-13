@@ -3,7 +3,10 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/320exh/prompt-diff/internal/prompt"
 )
 
 func TestDisplayRef(t *testing.T) {
@@ -36,5 +39,21 @@ func TestPromptAtRefWorkingCopy(t *testing.T) {
 func TestPromptAtRefMissingWorkingCopy(t *testing.T) {
 	if _, err := promptAtRef(filepath.Join(t.TempDir(), "nope.prompt"), ""); err == nil {
 		t.Error("expected error for missing working-copy file")
+	}
+}
+
+func TestPrintDiffSemanticNoKey(t *testing.T) {
+	t.Setenv("VOYAGE_API_KEY", "")
+	oldP, err := prompt.Parse([]byte("---\nmodels: [gpt-4o]\n---\nhello"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	newP, err := prompt.Parse([]byte("---\nmodels: [gpt-4o]\n---\nhello world"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = printDiff("x.prompt", oldP, newP, true)
+	if err == nil || !strings.Contains(err.Error(), "VOYAGE_API_KEY") {
+		t.Errorf("err = %v, want VOYAGE_API_KEY error", err)
 	}
 }
