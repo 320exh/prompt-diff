@@ -99,9 +99,9 @@ Structural Diffs:
 Evaluate prompt changes across a test-case matrix before pushing to production:
 
 ```bash
-# Run local test matrix using Ollama and Claude
+# Run local test matrix using Ollama and OpenAI
 prompt-diff eval --prompt prompts/agent_v2.prompt --tests tests/eval_suite.json \
-  --models llama3.1:8b,claude-3-5-sonnet --output report.html
+  --models llama3.1:8b,gpt-4o-mini --output report.html
 
 # Reviews this run's results later
 prompt-diff runs

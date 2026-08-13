@@ -33,7 +33,7 @@ A standalone HTML report is written to --output.
 
 Examples:
   prompt-diff eval --prompt prompts/agent_v2.prompt --tests tests/eval_suite.json \
-    --models llama3.1:8b,claude-3-5-sonnet --output report.html`,
+    --models llama3.1:8b,gpt-4o-mini --output report.html`,
 	Args: cobra.NoArgs,
 	RunE: runEval,
 }
