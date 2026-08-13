@@ -160,7 +160,7 @@ func resolveEndpoint(providerName string) string {
 	case "openai":
 		return envOr("OPENAI_BASE_URL", "https://api.openai.com/v1")
 	default:
-		return envOr(providerName+"_BASE_URL", "")
+		return envOr(strings.ToUpper(providerName)+"_BASE_URL", "")
 	}
 }
 
