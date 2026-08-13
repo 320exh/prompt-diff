@@ -3,7 +3,6 @@
 > A fast, git-native CLI & local Web UI to version, diff tokens/costs, and benchmark LLM system prompts across local and cloud models.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Report Card](https://goreportcard.com/badge/github.com/320exh/prompt-diff)](https://goreportcard.com/report/github.com/320exh/prompt-diff)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 ---
