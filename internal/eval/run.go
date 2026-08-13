@@ -3,6 +3,7 @@ package eval
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,7 +40,7 @@ func Run(ctx context.Context, p *prompt.Template, suite *Suite, models []string)
 				switch {
 				case out.Error != "":
 					cell.Skipped = true
-				case score(suite.Cases[ci].Expect, out.Response):
+				case score(ctx, suite.Cases[ci].Expect, out.Response):
 					cell.Passed = true
 				default:
 					cell.Failed = true
@@ -118,7 +119,7 @@ var (
 )
 
 // score checks an expected-output map against the model's response text.
-func score(expect map[string]interface{}, out string) bool {
+func score(ctx context.Context, expect map[string]interface{}, out string) bool {
 	trim := strings.TrimSpace(out)
 	for k, v := range expect {
 		switch t := v.(type) {
@@ -132,12 +133,13 @@ func score(expect map[string]interface{}, out string) bool {
 				return false
 			}
 		case map[string]interface{}:
-			// operator map like { "$in": [...] } or { "$gte": N }
-			if !evalOp(k, t, trim) {
+			// operator map like { "$in": [...] }, { "$gte": N }, { "$regex": ... },
+			// { "$schema": {...} }, or { "$llm_judge": {...} }
+			if !evalOp(ctx, k, t, trim) {
 				return false
 			}
 		default:
-			if !evalOp(k, map[string]interface{}{"==": v}, trim) {
+			if !evalOp(ctx, k, map[string]interface{}{"==": v}, trim) {
 				return false
 			}
 		}
@@ -154,7 +156,7 @@ func anyContains(items []interface{}, out string) bool {
 	return false
 }
 
-func evalOp(key string, op map[string]interface{}, out string) bool {
+func evalOp(ctx context.Context, key string, op map[string]interface{}, out string) bool {
 	for opName, raw := range op {
 		switch opName {
 		case "$in":
@@ -178,9 +180,125 @@ func evalOp(key string, op map[string]interface{}, out string) bool {
 		case "==":
 			s, _ := raw.(string)
 			return strings.Contains(strings.ToLower(out), strings.ToLower(s))
+		case "$regex":
+			pattern, _ := raw.(string)
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				return false
+			}
+			return re.MatchString(out)
+		case "$schema":
+			spec, ok := raw.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			return matchesSchema(spec, out)
+		case "$llm_judge":
+			spec, _ := raw.(map[string]interface{})
+			return llmJudge(ctx, spec, out)
 		}
 	}
 	return true
+}
+
+// matchesSchema checks a JSON-ish output against a lightweight schema:
+// { "required": ["field", ...], "properties": { "field": { "type": "string" } } }.
+func matchesSchema(spec map[string]interface{}, out string) bool {
+	obj, ok := extractJSONObject(out)
+	if !ok {
+		return false
+	}
+	if req, ok := spec["required"].([]interface{}); ok {
+		for _, r := range req {
+			name, _ := r.(string)
+			if _, present := obj[name]; !present {
+				return false
+			}
+		}
+	}
+	if props, ok := spec["properties"].(map[string]interface{}); ok {
+		for name, propSpec := range props {
+			ps, ok := propSpec.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			wantType, _ := ps["type"].(string)
+			if wantType == "" {
+				continue
+			}
+			val, present := obj[name]
+			if !present {
+				continue
+			}
+			if !jsonTypeMatches(wantType, val) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func jsonTypeMatches(want string, val interface{}) bool {
+	switch want {
+	case "string":
+		_, ok := val.(string)
+		return ok
+	case "number":
+		_, ok := val.(float64)
+		return ok
+	case "integer":
+		f, ok := val.(float64)
+		return ok && f == float64(int64(f))
+	case "boolean":
+		_, ok := val.(bool)
+		return ok
+	case "array":
+		_, ok := val.([]interface{})
+		return ok
+	case "object":
+		_, ok := val.(map[string]interface{})
+		return ok
+	default:
+		return true
+	}
+}
+
+// extractJSONObject pulls the first JSON object out of a model response,
+// preferring a fenced ```json``` block over a bare {...} substring.
+func extractJSONObject(out string) (map[string]interface{}, bool) {
+	candidate := out
+	if m := jsonBlockRe.FindStringSubmatch(out); len(m) > 1 {
+		candidate = m[1]
+	} else if start := strings.Index(out, "{"); start >= 0 {
+		if end := strings.LastIndex(out, "}"); end > start {
+			candidate = out[start : end+1]
+		}
+	}
+	var obj map[string]interface{}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(candidate)), &obj); err != nil {
+		return nil, false
+	}
+	return obj, true
+}
+
+// llmJudge asks a grader model whether the output satisfies given criteria.
+// spec: { "criteria": "...", "model": "gpt-4o-mini" (optional) }.
+func llmJudge(ctx context.Context, spec map[string]interface{}, out string) bool {
+	criteria, _ := spec["criteria"].(string)
+	if criteria == "" {
+		return false
+	}
+	model, _ := spec["model"].(string)
+	if model == "" {
+		model = envOr("PROMPTDIFF_JUDGE_MODEL", "gpt-4o-mini")
+	}
+	sys := "You are a strict grader. Respond with exactly one word: PASS or FAIL."
+	user := fmt.Sprintf("Criteria: %s\n\nOutput to grade:\n%s", criteria, out)
+	verdict := callProvider(ctx, model, sys, user)
+	if verdict.Error != "" {
+		return false
+	}
+	return strings.Contains(strings.ToUpper(verdict.Response), "PASS")
 }
 
 type numericField struct {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/320exh/prompt-diff/internal/prompt"
@@ -43,53 +44,110 @@ func TestKeyFor(t *testing.T) {
 
 func TestScoreStringContains(t *testing.T) {
 	expect := map[string]interface{}{"category": "Billing"}
-	if !score(expect, "The category is billing related.") {
+	if !score(context.Background(), expect, "The category is billing related.") {
 		t.Error("expected match on case-insensitive substring")
 	}
-	if score(expect, "The category is shipping related.") {
+	if score(context.Background(), expect, "The category is shipping related.") {
 		t.Error("expected no match")
 	}
 }
 
 func TestScoreList(t *testing.T) {
 	expect := map[string]interface{}{"category": []interface{}{"Billing", "Refund"}}
-	if !score(expect, "This is a Refund case.") {
+	if !score(context.Background(), expect, "This is a Refund case.") {
 		t.Error("expected list match")
 	}
-	if score(expect, "This is a Shipping case.") {
+	if score(context.Background(), expect, "This is a Shipping case.") {
 		t.Error("expected list mismatch")
 	}
 }
 
 func TestScoreOperatorGteLte(t *testing.T) {
 	expect := map[string]interface{}{"confidence": map[string]interface{}{"$gte": 0.8}}
-	if !score(expect, `{"confidence": 0.95}`) {
+	if !score(context.Background(), expect, `{"confidence": 0.95}`) {
 		t.Error("expected $gte match")
 	}
-	if score(expect, `{"confidence": 0.5}`) {
+	if score(context.Background(), expect, `{"confidence": 0.5}`) {
 		t.Error("expected $gte mismatch")
 	}
 
 	expectLte := map[string]interface{}{"latency": map[string]interface{}{"$lte": 100}}
-	if !score(expectLte, "```json\n{\"latency\": 42}\n```") {
+	if !score(context.Background(), expectLte, "```json\n{\"latency\": 42}\n```") {
 		t.Error("expected $lte match inside json block")
 	}
 }
 
 func TestScoreOperatorIn(t *testing.T) {
 	expect := map[string]interface{}{"label": map[string]interface{}{"$in": []interface{}{"Yes", "No"}}}
-	if !score(expect, "Answer: Yes") {
+	if !score(context.Background(), expect, "Answer: Yes") {
 		t.Error("expected $in match")
 	}
-	if score(expect, "Answer: Maybe") {
+	if score(context.Background(), expect, "Answer: Maybe") {
 		t.Error("expected $in mismatch")
 	}
 }
 
 func TestScoreDefaultEquality(t *testing.T) {
 	expect := map[string]interface{}{"x": "42"}
-	if !score(expect, "x is 42") {
+	if !score(context.Background(), expect, "x is 42") {
 		t.Error("expected default equality match via ==")
+	}
+}
+
+func TestScoreOperatorRegex(t *testing.T) {
+	expect := map[string]interface{}{"id": map[string]interface{}{"$regex": `^ORD-\d{4}$`}}
+	if !score(context.Background(), expect, "ORD-1234") {
+		t.Error("expected $regex match")
+	}
+	if score(context.Background(), expect, "ORD-12") {
+		t.Error("expected $regex mismatch")
+	}
+}
+
+func TestScoreOperatorSchema(t *testing.T) {
+	expect := map[string]interface{}{
+		"_": map[string]interface{}{
+			"$schema": map[string]interface{}{
+				"required":   []interface{}{"category", "confidence"},
+				"properties": map[string]interface{}{"confidence": map[string]interface{}{"type": "number"}},
+			},
+		},
+	}
+	if !score(context.Background(), expect, `{"category": "Billing", "confidence": 0.9}`) {
+		t.Error("expected $schema match")
+	}
+	if score(context.Background(), expect, `{"category": "Billing"}`) {
+		t.Error("expected $schema mismatch on missing required field")
+	}
+	if score(context.Background(), expect, `{"category": "Billing", "confidence": "high"}`) {
+		t.Error("expected $schema mismatch on wrong type")
+	}
+}
+
+func TestScoreOperatorLLMJudge(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req chatRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		content := "FAIL"
+		if strings.Contains(req.Messages[len(req.Messages)-1].Content, "good") {
+			content = "PASS"
+		}
+		_ = json.NewEncoder(w).Encode(chatResponse{
+			Choices: []struct {
+				Message msg `json:"message"`
+			}{{Message: msg{Role: "assistant", Content: content}}},
+		})
+	}))
+	defer srv.Close()
+	t.Setenv("OLLAMA_BASE_URL", srv.URL)
+	t.Setenv("PROMPTDIFF_JUDGE_MODEL", "llama3.1:8b")
+
+	expect := map[string]interface{}{"_": map[string]interface{}{"$llm_judge": map[string]interface{}{"criteria": "is polite"}}}
+	if !score(context.Background(), expect, "this is a good response") {
+		t.Error("expected $llm_judge pass")
+	}
+	if score(context.Background(), expect, "this is a bad response") {
+		t.Error("expected $llm_judge fail")
 	}
 }
 
