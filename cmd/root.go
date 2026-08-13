@@ -8,7 +8,7 @@ import (
 )
 
 // Version is set at build time via -ldflags; default for dev builds.
-var Version = "v1.0.1"
+var Version = "v1.0.2"
 
 var rootCmd = &cobra.Command{
 	Use:   "prompt-diff",
