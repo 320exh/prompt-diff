@@ -41,7 +41,10 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 
 ### Installation
 
-> Homebrew tap and pre-built release binaries are planned (see [Roadmap](#-roadmap)) but not published yet. Until then, install via Go or build from source.
+#### Using Homebrew (macOS)
+```bash
+brew install 320exh/prompt-diff/prompt-diff
+```
 
 #### Using Go
 ```bash
@@ -157,9 +160,9 @@ Return JSON with classification and confidence score.
 - [x] Git-native diffing: `prompt-diff diff <file> [--v1=ref --v2=ref]`
 - [x] SQLite-backed eval history (`prompt-diff runs`)
 - [x] `prompt-diff ui` serves the zero-config local dashboard
+- [x] Homebrew tap + published release binaries (macOS)
 
 **v2 (planned):**
-- [ ] Homebrew tap + published release binaries
 - [ ] GitHub Action integration (`prompt-diff-action`) for PR regression checks
 - [ ] Automated prompt optimization & auto-compressor node
 - [ ] Direct Anthropic / Gemini API clients (currently clear errors)
