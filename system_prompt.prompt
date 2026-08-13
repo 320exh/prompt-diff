@@ -1,0 +1,17 @@
+---
+name: Customer Support Classifier
+version: 2.1.0
+models:
+  - gpt-4o-mini
+  - llama3.1:8b
+variables:
+  - user_query
+  - historical_context
+---
+You are an expert customer support agent.
+Analyze the user query: {{ user_query }}
+
+Context history:
+{{ historical_context }}
+
+Return JSON with classification and confidence score.
