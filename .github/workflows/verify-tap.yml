@@ -1,0 +1,24 @@
+name: Verify Homebrew tap
+
+# Manual check that `brew install 320exh/prompt-diff/prompt-diff` actually
+# works end-to-end on both platforms the tap claims to support. Run this
+# after any change to the release workflow's tap-sync step, or whenever in
+# doubt about tap health.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: brew install
+        run: brew install 320exh/prompt-diff/prompt-diff
+
+      - name: Run installed binary
+        run: |
+          prompt-diff version
+          prompt-diff --help
