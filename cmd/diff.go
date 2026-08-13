@@ -62,7 +62,11 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Token Delta: %+d tokens (%+.1f%%)\n", d.TokenDelta, d.TokenPercent)
 	fmt.Println("Cost Projection (100k invocations):")
 	for _, c := range d.Costs {
-		fmt.Printf("  - %-19s $%.2f -> $%.2f (+$%.2f)\n", c.Model+":", c.Old, c.New, c.Delta)
+		warn := ""
+		if c.Approx {
+			warn = "  (~approx tokenizer, no published BPE vocab for this model)"
+		}
+		fmt.Printf("  - %-19s $%.2f -> $%.2f (+$%.2f)%s\n", c.Model+":", c.Old, c.New, c.Delta, warn)
 	}
 
 	if len(d.AddedSections)+len(d.RemovedSections)+len(d.ModifiedVars)+len(d.AddedVars)+len(d.RemovedVars) > 0 {

@@ -25,10 +25,14 @@ type Diff struct {
 
 // CostLine is one model row of the cost projection.
 type CostLine struct {
-	Model string
-	Old   float64
-	New   float64
-	Delta float64
+	Model    string
+	Old      float64
+	New      float64
+	Delta    float64
+	// Approx is true when Model has no known BPE vocabulary, so the token
+	// counts behind Old/New/Delta are approximated with cl100k_base rather
+	// than the model's real tokenizer.
+	Approx bool
 }
 
 // VarChange records a variable that was renamed.
@@ -53,13 +57,16 @@ func Compare(oldP, newP *prompt.Template) Diff {
 	models := orderedUnion(newP.Models, oldP.Models)
 	const invocations = 100_000
 	for _, m := range models {
-		oldCost := cost.EstimateBulk(m, int64(oldToks), invocations)
-		newCost := cost.EstimateBulk(m, int64(newToks), invocations)
+		mOldToks, exact := tokenizer.CountForModel(m, oldP.Body)
+		mNewToks, _ := tokenizer.CountForModel(m, newP.Body)
+		oldCost := cost.EstimateBulk(m, int64(mOldToks), invocations)
+		newCost := cost.EstimateBulk(m, int64(mNewToks), invocations)
 		d.Costs = append(d.Costs, CostLine{
-			Model: m,
-			Old:   round2(oldCost),
-			New:   round2(newCost),
-			Delta: round2(newCost - oldCost),
+			Model:  m,
+			Old:    round2(oldCost),
+			New:    round2(newCost),
+			Delta:  round2(newCost - oldCost),
+			Approx: !exact,
 		})
 	}
 

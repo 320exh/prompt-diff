@@ -34,7 +34,7 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 | **CLI Engine** | Go / Cobra | Lightning-fast execution, sub-millisecond startup, native git tree parsing |
 | **Dashboard UI** | Svelte + Tailwind (Vite) | Compiled to static assets and embedded into the binary via `embed.FS` for zero-install local visualization |
 | **Data Layer** | SQLite (`modernc.org/sqlite`) | Pure-Go zero-CGO embedded store for local evaluations and runs |
-| **Tokenizers** | Embedded `cl100k_base` BPE (`tiktoken` vocab) | Pure-Go byte-level BPE token counting without network calls |
+| **Tokenizers** | Embedded `cl100k_base` + `o200k_base` BPE (`tiktoken` vocabs), auto-selected per model | Pure-Go byte-level BPE token counting without network calls |
 
 ---
 
