@@ -98,33 +98,51 @@ jobs:
           version="${{ steps.ver.outputs.version }}"
           tag="${{ steps.ver.outputs.tag }}"
 
-          sed -i \
-            -e "s|version \".*\"|version \"${version}\"|" \
-            -e "s|releases/download/v[^/]*/prompt-diff-darwin-arm64|releases/download/${tag}/prompt-diff-darwin-arm64|" \
-            -e "s|releases/download/v[^/]*/prompt-diff-darwin-amd64|releases/download/${tag}/prompt-diff-darwin-amd64|" \
-            -e "s|releases/download/v[^/]*/prompt-diff-linux-arm64|releases/download/${tag}/prompt-diff-linux-arm64|" \
-            -e "s|releases/download/v[^/]*/prompt-diff-linux-amd64|releases/download/${tag}/prompt-diff-linux-amd64|" \
-            -e "s|assert_match \"v[^\"]*\"|assert_match \"${tag}\"|" \
-            prompt-diff.rb
+          # Regenerate the formula from scratch each release rather than
+          # sed-patching the tap's copy — keeps this workflow the single
+          # source of truth for its structure (e.g. adding a new platform
+          # stanza here is enough; no separate manual edit to the tap repo).
+          arm64_sha="${{ steps.sha.outputs.arm64 }}"
+          amd64_sha="${{ steps.sha.outputs.amd64 }}"
+          linux_arm64_sha="${{ steps.sha.outputs.linux_arm64 }}"
+          linux_amd64_sha="${{ steps.sha.outputs.linux_amd64 }}"
 
-          # sha256 lines don't name their platform, so key the replacement off
-          # the platform-specific url line immediately above each one.
-          awk -v arm64="${{ steps.sha.outputs.arm64 }}" \
-              -v amd64="${{ steps.sha.outputs.amd64 }}" \
-              -v linux_arm64="${{ steps.sha.outputs.linux_arm64 }}" \
-              -v linux_amd64="${{ steps.sha.outputs.linux_amd64 }}" '
-            /darwin-arm64"/ { want="darwin-arm64" }
-            /darwin-amd64"/ { want="darwin-amd64" }
-            /linux-arm64"/  { want="linux-arm64" }
-            /linux-amd64"/  { want="linux-amd64" }
-            /sha256 "/ {
-              if (want == "darwin-arm64") sub(/sha256 "[a-f0-9]*"/, "sha256 \"" arm64 "\"")
-              else if (want == "darwin-amd64") sub(/sha256 "[a-f0-9]*"/, "sha256 \"" amd64 "\"")
-              else if (want == "linux-arm64") sub(/sha256 "[a-f0-9]*"/, "sha256 \"" linux_arm64 "\"")
-              else if (want == "linux-amd64") sub(/sha256 "[a-f0-9]*"/, "sha256 \"" linux_amd64 "\"")
-            }
-            { print }
-          ' prompt-diff.rb > prompt-diff.rb.tmp && mv prompt-diff.rb.tmp prompt-diff.rb
+          printf '%s\n' \
+            'class PromptDiff < Formula' \
+            '  desc "Version, diff, and benchmark LLM system prompts"' \
+            '  homepage "https://github.com/320exh/prompt-diff"' \
+            '  license "MIT"' \
+            "  version \"${version}\"" \
+            '' \
+            '  on_macos do' \
+            '    if Hardware::CPU.arm?' \
+            "      url \"https://github.com/320exh/prompt-diff/releases/download/${tag}/prompt-diff-darwin-arm64\"" \
+            "      sha256 \"${arm64_sha}\"" \
+            '    else' \
+            "      url \"https://github.com/320exh/prompt-diff/releases/download/${tag}/prompt-diff-darwin-amd64\"" \
+            "      sha256 \"${amd64_sha}\"" \
+            '    end' \
+            '  end' \
+            '' \
+            '  on_linux do' \
+            '    if Hardware::CPU.arm?' \
+            "      url \"https://github.com/320exh/prompt-diff/releases/download/${tag}/prompt-diff-linux-arm64\"" \
+            "      sha256 \"${linux_arm64_sha}\"" \
+            '    else' \
+            "      url \"https://github.com/320exh/prompt-diff/releases/download/${tag}/prompt-diff-linux-amd64\"" \
+            "      sha256 \"${linux_amd64_sha}\"" \
+            '    end' \
+            '  end' \
+            '' \
+            '  def install' \
+            '    bin.install Dir["prompt-diff-*"].first => "prompt-diff"' \
+            '  end' \
+            '' \
+            '  test do' \
+            "    assert_match \"${tag}\", shell_output(\"#{bin}/prompt-diff version\")" \
+            '  end' \
+            'end' \
+            > prompt-diff.rb
 
           if git diff --quiet; then
             echo "Formula already up to date; nothing to commit."
