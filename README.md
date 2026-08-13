@@ -2,6 +2,7 @@
 
 > A fast, git-native CLI & local Web UI to version, diff tokens/costs, and benchmark LLM system prompts across local and cloud models.
 
+[![CI](https://github.com/320exh/prompt-diff/actions/workflows/ci.yml/badge.svg)](https://github.com/320exh/prompt-diff/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
@@ -40,18 +41,12 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 
 ### Installation
 
-#### Using Homebrew (macOS / Linux)
-```bash
-brew install 320exh/tap/prompt-diff
-```
+> Homebrew tap and pre-built release binaries are planned (see [Roadmap](#-roadmap)) but not published yet. Until then, install via Go or build from source.
 
 #### Using Go
 ```bash
 go install github.com/320exh/prompt-diff@latest
 ```
-
-#### Pre-built Binaries
-Download the latest pre-compiled binary for Linux, macOS, or Windows from the [Releases](https://github.com/320exh/prompt-diff/releases) page.
 
 #### Build from source
 ```bash
@@ -59,8 +54,10 @@ git clone https://github.com/320exh/prompt-diff.git
 cd prompt-diff
 
 # build the Go binary (embeds the compiled dashboard UI)
-npm --prefix web install && npm --prefix web run build
-go build -o prompt-diff .
+make build
+# equivalent to:
+#   npm --prefix web install && npm --prefix web run build
+#   go build -o prompt-diff .
 ```
 
 ---
@@ -162,6 +159,7 @@ Return JSON with classification and confidence score.
 - [x] `prompt-diff ui` serves the zero-config local dashboard
 
 **v2 (planned):**
+- [ ] Homebrew tap + published release binaries
 - [ ] GitHub Action integration (`prompt-diff-action`) for PR regression checks
 - [ ] Automated prompt optimization & auto-compressor node
 - [ ] Direct Anthropic / Gemini API clients (currently clear errors)
@@ -179,6 +177,12 @@ Contributions are warmly welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) 
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+---
+
+## 🔒 Security
+
+Provider API keys are read from environment variables only, never persisted. See [SECURITY.md](SECURITY.md) for details and how to report vulnerabilities.
 
 ---
 

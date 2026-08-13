@@ -28,7 +28,7 @@ Be kind, constructive, and respectful. Harassment and other exclusionary behavio
 
 ### Prerequisites
 
-- **Go 1.22+** — CLI engine and single-binary build
+- **Go 1.26+** — CLI engine and single-binary build
 - **Node.js 20+** — Svelte dashboard UI development
 - *(Optional)* **Ollama** or **Llama.cpp** — local model evaluation
 
@@ -41,21 +41,21 @@ Be kind, constructive, and respectful. Harassment and other exclusionary behavio
    cd prompt-diff
    ```
 
-2. Build the CLI binary:
+2. Build everything (rebuilds the dashboard UI, then the Go binary):
 
    ```bash
-   go build -o prompt-diff .
+   make build
    ```
 
-3. For UI work, install the Svelte toolchain and rebuild the embedded assets:
+   Or step by step:
 
    ```bash
-   cd ui
-   npm install
-   npm run build
+   go build -o prompt-diff .          # Go binary only, uses last-built dist/
+   npm --prefix web install           # dashboard toolchain
+   npm --prefix web run build         # rebuilds internal/uiserver/dist
    ```
 
-   The compiled UI is embedded into the binary via `embed.FS`.
+3. If you changed anything under `web/src`, rebuild the UI (`npm --prefix web run build`) and commit the updated `internal/uiserver/dist` alongside your change — it's checked into git and embedded into the binary via `embed.FS`. CI (`dist-sync` job) fails the PR if `dist` is out of sync with `web/src`.
 
 ## Project Structure
 
@@ -63,7 +63,7 @@ Be kind, constructive, and respectful. Harassment and other exclusionary behavio
 prompt-diff/
 ├── cmd/                  # CLI entrypoints (root, diff, eval, ui)
 ├── internal/             # Core logic: parse, diff, tokenize, cost, eval
-├── ui/                   # Svelte + Tailwind dashboard sources
+├── web/                  # Svelte + Tailwind dashboard sources (builds into internal/uiserver/dist)
 ├── prompts/              # Example .prompt templates
 ├── tests/                # Evaluation test-case matrices (eval_suite.json)
 └── README.md
