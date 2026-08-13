@@ -142,7 +142,7 @@ func TestRunEndToEnd(t *testing.T) {
 		})
 	}))
 	defer srv.Close()
-	t.Setenv("ollama_BASE_URL", srv.URL)
+	t.Setenv("OLLAMA_BASE_URL", srv.URL)
 
 	p := &prompt.Template{Name: "test-prompt", Body: "sys"}
 	suite := &Suite{
