@@ -8,6 +8,9 @@ name: Verify Homebrew tap
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     strategy:
