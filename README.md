@@ -46,6 +46,12 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 brew install 320exh/prompt-diff/prompt-diff
 ```
 
+#### Pre-built binary (Linux)
+Download `prompt-diff-linux-amd64` or `prompt-diff-linux-arm64` from the [latest release](https://github.com/320exh/prompt-diff/releases/latest), then:
+```bash
+chmod +x prompt-diff-linux-* && sudo mv prompt-diff-linux-* /usr/local/bin/prompt-diff
+```
+
 #### Using Go
 ```bash
 go install github.com/320exh/prompt-diff@latest
@@ -160,7 +166,7 @@ Return JSON with classification and confidence score.
 - [x] Git-native diffing: `prompt-diff diff <file> [--v1=ref --v2=ref]`
 - [x] SQLite-backed eval history (`prompt-diff runs`)
 - [x] `prompt-diff ui` serves the zero-config local dashboard
-- [x] Homebrew tap + published release binaries (macOS)
+- [x] Homebrew tap + published release binaries (macOS, Linux)
 
 **v2 (planned):**
 - [ ] GitHub Action integration (`prompt-diff-action`) for PR regression checks
