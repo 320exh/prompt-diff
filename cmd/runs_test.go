@@ -57,6 +57,63 @@ func TestRunRunsExport(t *testing.T) {
 	}
 }
 
+func TestRunRunsExportPDF(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("PROMPT_DIFF_DB", filepath.Join(dir, "runs.db"))
+	defer os.Unsetenv("PROMPT_DIFF_DB")
+
+	s, err := store.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id1, err := s.RecordRun("example.prompt", "example.eval.json", "claude-3-haiku", 10, 8, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	outPath := filepath.Join(dir, "report.pdf")
+	runsExportOut = outPath
+	runsExportFormat = "pdf"
+	defer func() { runsExportOut = ""; runsExportFormat = "md" }()
+
+	if err := runRunsExport(runsExportCmd, []string{strconv.FormatInt(id1, 10)}); err != nil {
+		t.Fatalf("runRunsExport pdf: %v", err)
+	}
+
+	data, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(data), "%PDF-") {
+		t.Errorf("output does not look like a PDF: %q", data[:min(20, len(data))])
+	}
+}
+
+func TestRunRunsExportPDFRequiresOut(t *testing.T) {
+	dir := t.TempDir()
+	os.Setenv("PROMPT_DIFF_DB", filepath.Join(dir, "runs.db"))
+	defer os.Unsetenv("PROMPT_DIFF_DB")
+
+	s, err := store.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id1, err := s.RecordRun("example.prompt", "example.eval.json", "claude-3-haiku", 10, 8, 1, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	runsExportOut = ""
+	runsExportFormat = "pdf"
+	defer func() { runsExportFormat = "md" }()
+
+	if err := runRunsExport(runsExportCmd, []string{strconv.FormatInt(id1, 10)}); err == nil {
+		t.Error("expected error when --format pdf used without --out")
+	}
+}
+
 func TestRunRunsExportUnknownID(t *testing.T) {
 	dir := t.TempDir()
 	os.Setenv("PROMPT_DIFF_DB", filepath.Join(dir, "runs.db"))
