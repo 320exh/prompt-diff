@@ -146,10 +146,15 @@ prompt-diff eval --prompt prompts/agent_v2.prompt --tests tests/eval_suite.json 
 
 # Reviews this run's results later
 prompt-diff runs
+
+# Compare two stored runs, or export a markdown benchmark report
+prompt-diff runs compare 12 13
+prompt-diff runs export 12 13 --out report.md
 ```
 
 > The eval harness records every run in a local SQLite store (`runs.db`). See `prompt-diff runs` to list past runs.
 > In-flight provider calls are capped at 5 by default (`--concurrency N` to change) to avoid tripping rate limits on large suites.
+> `prompt-diff runs export` writes a markdown table of the given run(s); pass exactly two ids to also get a delta section. PDF export is not yet implemented.
 
 ---
 
