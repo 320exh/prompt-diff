@@ -49,35 +49,10 @@
       {/if}
     {/if}
   </section>
-
-  <section class="pd-card pad">
-    <h2 class="table-title">Cost table</h2>
-    {#if info}
-      <table class="pd-table">
-        <thead>
-          <tr><th>Model</th><th>$ / 1M tokens</th><th></th></tr>
-        </thead>
-        <tbody>
-          {#each info.models as m}
-            <tr>
-              <td class="mono">{m.model}</td>
-              <td class="mono">{m.price_per_1m.toFixed(2)}</td>
-              <td>{#if m.overridden}<span class="pd-badge pd-badge-neutral">override</span>{/if}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    {/if}
-  </section>
 </div>
 
 <style>
   .stack { display: flex; flex-direction: column; gap: 1rem; max-width: 760px; }
-  .table-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem; }
-  .pd-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-  .pd-table th { text-align: left; color: var(--pd-text-faint); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--pd-border); }
-  .pd-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--pd-border); }
-  .mono { font-family: var(--pd-font-mono); }
   .tab-header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
   .tab-header p { color: var(--pd-text-muted); font-size: 0.85rem; margin-top: 0.15rem; }
   .pad { padding: 1rem 1.1rem; }
