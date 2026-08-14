@@ -78,6 +78,23 @@ make build
 
 ## 💻 CLI Usage & Commands
 
+### 0. Scaffold a New Project
+
+Starting from scratch? `init` drops a starter `.prompt` file, eval suite, and config so the rest of the commands below have something to run against immediately:
+
+```bash
+prompt-diff init
+# created example.prompt
+# created example.eval.json
+# created .prompt-diff.yml
+
+prompt-diff lint example.prompt
+```
+
+Existing files are left untouched unless you pass `--force`.
+
+---
+
 ### 1. Inspect & Diff System Prompts
 
 Compare your current prompt draft against `HEAD` or a specific branch/commit:
