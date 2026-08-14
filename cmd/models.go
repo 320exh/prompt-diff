@@ -40,5 +40,15 @@ func runModels(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("price table stale (%d days old, limit %d)", age, staleAfterDays)
 		}
 	}
+
+	fmt.Println()
+	fmt.Printf("%-28s %s\n", "MODEL", "$/1M TOKENS")
+	for _, entry := range cost.List() {
+		suffix := ""
+		if entry.Overridden {
+			suffix = " (override)"
+		}
+		fmt.Printf("%-28s %.2f%s\n", entry.Model, entry.Per1M, suffix)
+	}
 	return nil
 }

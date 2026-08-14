@@ -80,6 +80,31 @@ func IsKnown(model string) bool {
 	return ok
 }
 
+// ListEntry is one row of the built-in cost table.
+type ListEntry struct {
+	Model     string  `json:"model"`
+	Per1M     float64 `json:"price_per_1m"`
+	Overridden bool   `json:"overridden"`
+}
+
+// List returns every model with a known price (built-in or overridden),
+// sorted by model name. Used by `prompt-diff models` and the web workspace
+// Models tab to render the full cost table, not just its freshness.
+func List() []ListEntry {
+	out := make([]ListEntry, 0, len(prices)+len(overrides))
+	for model, per1M := range prices {
+		if _, ok := overrides[model]; ok {
+			continue // overridden below, avoid duplicate row
+		}
+		out = append(out, ListEntry{Model: model, Per1M: per1M})
+	}
+	for model, per1M := range overrides {
+		out = append(out, ListEntry{Model: model, Per1M: per1M, Overridden: true})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
+	return out
+}
+
 // Lookup returns the USD per-1M-token price for a model.
 // Unlisted models fall back to a neutral default so projections never crash.
 func Lookup(model string) float64 {

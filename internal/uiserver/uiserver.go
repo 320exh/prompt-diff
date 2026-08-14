@@ -274,6 +274,7 @@ func modelsHandler(w http.ResponseWriter, r *http.Request) {
 		"age_days":         age,
 		"stale":            age > modelsStaleAfterDays,
 		"stale_after_days": modelsStaleAfterDays,
+		"models":           cost.List(),
 	})
 }
 
