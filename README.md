@@ -167,7 +167,7 @@ Open an instant local playground in your browser:
 prompt-diff ui --port 8080
 ```
 
-> Opens `http://localhost:8080` with interactive variable tuning, live token counter, and side-by-side stream comparison.
+> Opens `http://localhost:8080` with interactive variable tuning, live token counter, side-by-side stream comparison, and an eval-run history table (click two rows to see a pass-rate/passed/failed/total delta).
 
 ---
 

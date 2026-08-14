@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/320exh/prompt-diff/internal/prompt"
+	"github.com/320exh/prompt-diff/internal/store"
 	"github.com/320exh/prompt-diff/internal/tokenizer"
 )
 
@@ -59,6 +60,7 @@ func newMux() http.Handler {
 	mux.Handle("/", http.FileServer(http.FS(mustSub(distFS, "dist"))))
 	mux.HandleFunc("/api/tokenize", tokenizeHandler)
 	mux.HandleFunc("/api/compare", compareHandler)
+	mux.HandleFunc("/api/runs", runsHandler)
 	return mux
 }
 
@@ -104,6 +106,26 @@ func compareHandler(w http.ResponseWriter, r *http.Request) {
 
 type tokenResult struct {
 	Tokens int `json:"tokens"`
+}
+
+func runsHandler(w http.ResponseWriter, r *http.Request) {
+	s, err := store.Open()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer s.Close()
+
+	runs, err := s.ListRuns()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if runs == nil {
+		runs = []store.Run{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(runs)
 }
 
 var _ = prompt.Template{}
