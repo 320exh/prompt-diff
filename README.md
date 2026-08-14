@@ -159,7 +159,24 @@ prompt-diff runs export 12 13 --format pdf --out report.pdf
 
 ---
 
-### 3. Launch Local Web Workspace
+### 3. Auto-Compress a Prompt
+
+Ask an LLM to rewrite a prompt more tersely, guarded against quality regressions:
+
+```bash
+# Report the rewrite and its token savings, print the compressed body (no write)
+prompt-diff compress --prompt prompts/agent_v2.prompt --model claude-3-5-sonnet
+
+# Guard the rewrite against a pass-rate drop on your existing suite, then apply it
+prompt-diff compress --prompt prompts/agent_v2.prompt --model claude-3-5-sonnet \
+  --tests tests/eval_suite.json --max-loss 2 --apply
+```
+
+> Rejects the rewrite (nonzero exit, nothing written) if it drops a `{{ variable }}` placeholder, or — with `--tests` — if its pass rate falls more than `--max-loss` percentage points below the original's. `--apply` writes the result back to `--prompt` (or `--out`); frontmatter is re-serialized rather than preserved byte-for-byte.
+
+---
+
+### 4. Launch Local Web Workspace
 
 Open an instant local playground in your browser:
 
@@ -171,7 +188,7 @@ prompt-diff ui --port 8080
 
 ---
 
-### 4. Configuration
+### 5. Configuration
 
 Drop a `.prompt-diff.yml` in the repo root (or `~/.prompt-diff.yml` for a global default) to override built-in per-model pricing — useful for negotiated rates or non-USD projections:
 

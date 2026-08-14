@@ -103,6 +103,18 @@ func callProvider(ctx context.Context, model, sys, user string) complete {
 	return complete{Response: out}
 }
 
+// Complete performs a single one-off completion against the given model,
+// dispatched to its provider by the same name-prefix rules Run uses. It's
+// the building block for callers that need one LLM call outside a full eval
+// suite run (e.g. prompt compression).
+func Complete(ctx context.Context, model, sys, user string) (string, error) {
+	out := callProvider(ctx, model, sys, user)
+	if out.Error != "" {
+		return "", fmt.Errorf("%s", out.Error)
+	}
+	return out.Response, nil
+}
+
 // providerOf maps a model to its provider name.
 func providerOf(model string) string {
 	lower := strings.ToLower(model)
