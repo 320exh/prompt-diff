@@ -337,6 +337,9 @@ func evalHandler(w http.ResponseWriter, r *http.Request) {
 	if concurrency <= 0 {
 		concurrency = eval.DefaultConcurrency
 	}
+	if concurrency > eval.MaxConcurrency {
+		concurrency = eval.MaxConcurrency
+	}
 
 	rep := eval.RunWithConcurrency(r.Context(), p, suite, models, concurrency)
 	total, passed, failed, skipped := rep.Counts()

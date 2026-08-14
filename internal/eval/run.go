@@ -17,6 +17,10 @@ import (
 // specify one (0 or negative) via RunWithConcurrency.
 const DefaultConcurrency = 5
 
+// MaxConcurrency limits in-flight provider calls to prevent excessive memory
+// allocation from untrusted inputs.
+const MaxConcurrency = 100
+
 // Run executes a suite against each model concurrently and scores results,
 // using DefaultConcurrency in-flight calls at a time.
 func Run(ctx context.Context, p *prompt.Template, suite *Suite, models []string) Report {
@@ -30,6 +34,9 @@ func Run(ctx context.Context, p *prompt.Template, suite *Suite, models []string)
 func RunWithConcurrency(ctx context.Context, p *prompt.Template, suite *Suite, models []string, concurrency int) Report {
 	if concurrency <= 0 {
 		concurrency = DefaultConcurrency
+	}
+	if concurrency > MaxConcurrency {
+		concurrency = MaxConcurrency
 	}
 	sem := make(chan struct{}, concurrency)
 
