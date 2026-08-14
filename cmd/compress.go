@@ -10,7 +10,6 @@ import (
 	"github.com/320exh/prompt-diff/internal/prompt"
 	"github.com/320exh/prompt-diff/internal/tokenizer"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -141,7 +140,7 @@ func runCompress(cmd *cobra.Command, args []string) error {
 	if out == "" {
 		out = compressPrompt
 	}
-	rendered, err := renderPrompt(p, compressedBody)
+	rendered, err := prompt.Render(p, compressedBody)
 	if err != nil {
 		return fmt.Errorf("rendering compressed prompt: %w", err)
 	}
@@ -177,20 +176,3 @@ func stripCodeFence(s string) string {
 	return strings.Join(lines, "\n")
 }
 
-// renderPrompt re-serializes a template's frontmatter (name/version/models/
-// variables) followed by the given body. This normalizes frontmatter
-// formatting rather than preserving the original file's exact YAML layout.
-func renderPrompt(p *prompt.Template, body string) (string, error) {
-	fm := struct {
-		Name      string   `yaml:"name,omitempty"`
-		Version   string   `yaml:"version,omitempty"`
-		Models    []string `yaml:"models,omitempty"`
-		Variables []string `yaml:"variables,omitempty"`
-	}{Name: p.Name, Version: p.Version, Models: p.Models, Variables: p.Variables}
-
-	fmBytes, err := yaml.Marshal(fm)
-	if err != nil {
-		return "", err
-	}
-	return "---\n" + string(fmBytes) + "---\n" + body + "\n", nil
-}

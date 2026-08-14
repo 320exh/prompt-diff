@@ -27,7 +27,7 @@ func TestStripCodeFence(t *testing.T) {
 
 func TestRenderPrompt(t *testing.T) {
 	p := &prompt.Template{Name: "Test", Version: "1.0.0", Models: []string{"gpt-4o"}, Variables: []string{"x"}}
-	out, err := renderPrompt(p, "Hello {{ x }}")
+	out, err := prompt.Render(p, "Hello {{ x }}")
 	if err != nil {
 		t.Fatal(err)
 	}

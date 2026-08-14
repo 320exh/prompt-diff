@@ -100,6 +100,24 @@ func Parse(src []byte) (*Template, error) {
 	return &t, nil
 }
 
+// Render re-serializes a template's frontmatter (name/version/models/
+// variables) followed by the given body. This normalizes frontmatter
+// formatting rather than preserving an original file's exact YAML layout.
+func Render(t *Template, body string) (string, error) {
+	fm := struct {
+		Name      string   `yaml:"name,omitempty"`
+		Version   string   `yaml:"version,omitempty"`
+		Models    []string `yaml:"models,omitempty"`
+		Variables []string `yaml:"variables,omitempty"`
+	}{Name: t.Name, Version: t.Version, Models: t.Models, Variables: t.Variables}
+
+	fmBytes, err := yaml.Marshal(fm)
+	if err != nil {
+		return "", err
+	}
+	return "---\n" + string(fmBytes) + "---\n" + body + "\n", nil
+}
+
 // Sections splits the body into paragraph-sized sections on blank lines.
 func (t *Template) Sections() []string {
 	var out []string

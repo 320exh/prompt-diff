@@ -188,7 +188,20 @@ prompt-diff ui --port 8080
 
 ---
 
-### 5. Configuration
+### 5. Convert LangChain / LlamaIndex Prompts
+
+Diff, eval, or compress a prompt authored in another framework — or export a `.prompt` file back to one:
+
+```bash
+prompt-diff convert --in chain_prompt.json --from langchain --to prompt --out agent.prompt
+prompt-diff convert --in agent.prompt --from prompt --to llamaindex --out agent.json
+```
+
+> Covers the common single-template shape (LangChain `PromptTemplate.save()`/`load_prompt()`, LlamaIndex `PromptTemplate`) with f-string `{var}` placeholders converted to/from `{{ var }}`. Multi-message `ChatPromptTemplate` and other schema variants aren't supported.
+
+---
+
+### 6. Configuration
 
 Drop a `.prompt-diff.yml` in the repo root (or `~/.prompt-diff.yml` for a global default) to override built-in per-model pricing — useful for negotiated rates or non-USD projections:
 
