@@ -21,6 +21,13 @@ const DefaultConcurrency = 5
 // allocation from untrusted inputs.
 const MaxConcurrency = 100
 
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // Run executes a suite against each model concurrently and scores results,
 // using DefaultConcurrency in-flight calls at a time.
 func Run(ctx context.Context, p *prompt.Template, suite *Suite, models []string) Report {
@@ -35,10 +42,7 @@ func RunWithConcurrency(ctx context.Context, p *prompt.Template, suite *Suite, m
 	if concurrency <= 0 {
 		concurrency = DefaultConcurrency
 	}
-	if concurrency > MaxConcurrency {
-		concurrency = MaxConcurrency
-	}
-	sem := make(chan struct{}, concurrency)
+	sem := make(chan struct{}, minInt(concurrency, MaxConcurrency))
 
 	var mu sync.Mutex
 	results := []Cell{}
