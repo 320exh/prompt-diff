@@ -65,7 +65,7 @@ func TestRunConvertUnknownFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 	convertIn, convertFrom, convertTo, convertOut = in, "prompt", "bogus", filepath.Join(dir, "out")
-	if err := runConvert(convertCmd, nil); err == nil || !strings.Contains(err.Error(), "unknown --to") {
+	if err := runConvert(convertCmd, nil); err == nil || !strings.Contains(err.Error(), "unknown target format") {
 		t.Errorf("err = %v, want unknown-format error", err)
 	}
 }

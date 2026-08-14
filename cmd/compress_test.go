@@ -12,19 +12,6 @@ import (
 	"github.com/320exh/prompt-diff/internal/prompt"
 )
 
-func TestStripCodeFence(t *testing.T) {
-	cases := map[string]string{
-		"plain text":           "plain text",
-		"```\nfenced\n```":     "fenced",
-		"```text\nfenced\n```": "fenced",
-	}
-	for in, want := range cases {
-		if got := stripCodeFence(in); got != want {
-			t.Errorf("stripCodeFence(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestRenderPrompt(t *testing.T) {
 	p := &prompt.Template{Name: "Test", Version: "1.0.0", Models: []string{"gpt-4o"}, Variables: []string{"x"}}
 	out, err := prompt.Render(p, "Hello {{ x }}")

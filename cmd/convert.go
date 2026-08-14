@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/320exh/prompt-diff/internal/interop"
-	"github.com/320exh/prompt-diff/internal/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -51,38 +49,9 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("reading %q: %w", convertIn, err)
 	}
 
-	var t *prompt.Template
-	switch convertFrom {
-	case "prompt":
-		t, err = prompt.Parse(data)
-	case "langchain":
-		t, err = interop.FromLangChain(data)
-	case "llamaindex":
-		t, err = interop.FromLlamaIndex(data)
-	default:
-		return fmt.Errorf("unknown --from %q (want prompt, langchain, or llamaindex)", convertFrom)
-	}
+	out, err := interop.Convert(data, convertFrom, convertTo)
 	if err != nil {
-		return fmt.Errorf("parsing %q as %s: %w", convertIn, convertFrom, err)
-	}
-
-	var out []byte
-	switch convertTo {
-	case "prompt":
-		rendered, rerr := prompt.Render(t, t.Body)
-		if rerr != nil {
-			return fmt.Errorf("rendering .prompt: %w", rerr)
-		}
-		out = []byte(rendered)
-	case "langchain":
-		out, err = json.MarshalIndent(interop.ToLangChain(t), "", "  ")
-	case "llamaindex":
-		out, err = json.MarshalIndent(interop.ToLlamaIndex(t), "", "  ")
-	default:
-		return fmt.Errorf("unknown --to %q (want prompt, langchain, or llamaindex)", convertTo)
-	}
-	if err != nil {
-		return fmt.Errorf("encoding as %s: %w", convertTo, err)
+		return fmt.Errorf("converting %q: %w", convertIn, err)
 	}
 
 	if err := os.WriteFile(convertOut, out, 0o644); err != nil {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
+	"github.com/320exh/prompt-diff/internal/compress"
 	"github.com/320exh/prompt-diff/internal/eval"
 	"github.com/320exh/prompt-diff/internal/prompt"
 	"github.com/320exh/prompt-diff/internal/tokenizer"
@@ -53,15 +53,6 @@ func init() {
 	rootCmd.AddCommand(compressCmd)
 }
 
-const compressInstruction = `You compress LLM system prompts. Rewrite the prompt below to use as few
-tokens as possible while preserving every instruction, constraint, and
-{{ variable }} placeholder exactly as written (do not rename, add, or
-remove any {{ variable }} placeholder). Do not add commentary, headers, or
-markdown code fences. Output only the rewritten prompt text.
-
-PROMPT:
-`
-
 func runCompress(cmd *cobra.Command, args []string) error {
 	src, err := os.ReadFile(compressPrompt)
 	if err != nil {
@@ -76,19 +67,9 @@ func runCompress(cmd *cobra.Command, args []string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	rewritten, err := eval.Complete(ctx, compressModel, "", compressInstruction+p.Body)
+	compressedBody, err := compress.Rewrite(ctx, compressModel, p)
 	if err != nil {
-		return fmt.Errorf("compression call to %q failed: %w", compressModel, err)
-	}
-	compressedBody := strings.TrimSpace(stripCodeFence(rewritten))
-	if compressedBody == "" {
-		return fmt.Errorf("compression call to %q returned an empty rewrite", compressModel)
-	}
-
-	for _, v := range p.Variables {
-		if !strings.Contains(compressedBody, "{{ "+v+" }}") && !strings.Contains(compressedBody, "{{"+v+"}}") {
-			return fmt.Errorf("rewrite dropped required variable {{ %s }}; rejecting (nothing written)", v)
-		}
+		return err
 	}
 
 	before := tokenizer.Encoder.Count(p.Body)
@@ -157,22 +138,3 @@ func passRateOf(passed, total int) float64 {
 	}
 	return float64(passed) / float64(total) * 100
 }
-
-// stripCodeFence removes a single leading/trailing ``` fence if the model
-// wrapped its output in one despite being told not to.
-func stripCodeFence(s string) string {
-	s = strings.TrimSpace(s)
-	if !strings.HasPrefix(s, "```") {
-		return s
-	}
-	lines := strings.Split(s, "\n")
-	if len(lines) < 2 {
-		return s
-	}
-	lines = lines[1:]
-	if len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "```" {
-		lines = lines[:len(lines)-1]
-	}
-	return strings.Join(lines, "\n")
-}
-

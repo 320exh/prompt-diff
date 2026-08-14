@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/320exh/prompt-diff/internal/scaffold"
 	"github.com/spf13/cobra"
 )
 
@@ -24,66 +24,10 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 }
 
-var initFiles = map[string]string{
-	"example.prompt": `---
-name: Customer Support Classifier
-version: 1.0.0
-models:
-  - gpt-4o
-  - claude-3-5-sonnet
-variables:
-  - user_context
----
-You are an expert customer support agent.
-Analyze the user query using the context below.
-
-User context:
-{{ user_context }}
-
-Return JSON with the classification and confidence score.
-`,
-	"example.eval.json": `{
-  "name": "example regression suite",
-  "cases": [
-    {
-      "id": "refund-request",
-      "input": "I was charged twice this month and want a refund.",
-      "expect": {
-        "classification": { "$in": ["refund", "billing"] },
-        "confidence": { "$gte": 0.5 }
-      }
-    },
-    {
-      "id": "empty-query",
-      "input": "",
-      "expect": {
-        "classification": { "$in": ["unspecified", "unknown"] },
-        "confidence": { "$lte": 0.5 }
-      }
-    }
-  ]
-}
-`,
-	".prompt-diff.yml": `# prompt-diff config. See https://github.com/320exh/prompt-diff for docs.
-# price_overrides maps model name -> USD price per 1M input tokens, for
-# negotiated or non-USD pricing the built-in cost table doesn't know about.
-price_overrides: {}
-`,
-}
-
 func runInit(cmd *cobra.Command, args []string) error {
-	var written, skipped []string
-	for _, name := range []string{"example.prompt", "example.eval.json", ".prompt-diff.yml"} {
-		if !initForce {
-			if _, err := os.Stat(name); err == nil {
-				skipped = append(skipped, name)
-				continue
-			}
-		}
-		if err := os.WriteFile(name, []byte(initFiles[name]), 0o644); err != nil {
-			return fmt.Errorf("writing %s: %w", name, err)
-		}
-		written = append(written, name)
+	written, skipped, err := scaffold.Write("", initForce)
+	if err != nil {
+		return err
 	}
 	for _, name := range written {
 		fmt.Printf("created %s\n", name)

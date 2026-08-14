@@ -22,7 +22,7 @@ Prompt engineering has shifted from basic trial-and-error to core software engin
 - ⚙️ **Git-Native Prompt Tracking**: Automatically parses `.prompt` templates, identifies template variable injections, and tracks structural evolution across commits.
 - 📊 **Semantic & Token Diffing**: Visualizes added/deleted tokens in your terminal and calculates immediate cost impact projections per 1,000 invocations.
 - 🧪 **Batch Evaluation Harness**: Runs test matrices across local (Ollama), OpenAI, Anthropic, and Gemini models, with `contains`/list/`$in`/`$gte`/`$lte`/`$regex`/`$schema`/`$llm_judge` assertion operators.
-- 🖥️ **Zero-Config Local Workspace**: Spin up an embedded local web dashboard (`prompt-diff ui`) to tweak variables and compare side-by-side model outputs in real time. Running the binary with no arguments (or double-clicking it on Windows) launches the dashboard directly.
+- 🖥️ **Full-Parity Web Workspace**: Spin up an embedded local web dashboard (`prompt-diff ui`) with a tab for every CLI capability — Diff, Lint, Eval, Compress, Convert, Runs history/export, Models, and Setup (init/hook) — so nothing is CLI-only. Running the binary with no arguments (or double-clicking it on Windows) launches the dashboard directly.
 - 📦 **Single-Binary Zero Setup**: Compiles into a single self-contained binary with zero external runtime dependencies.
 
 ---
@@ -184,7 +184,7 @@ Open an instant local playground in your browser:
 prompt-diff ui --port 8080
 ```
 
-> Opens `http://localhost:8080` with interactive variable tuning, live token counter, side-by-side stream comparison, and an eval-run history table (click two rows to see a pass-rate/passed/failed/total delta).
+> Opens `http://localhost:8080` on a full-parity dashboard: **Workspace** (variable tuning, live token counter, side-by-side comparison), **Diff** (paste two prompt versions for the same token/cost/structural report as `prompt-diff diff`), **Lint**, **Eval** (runs against your provider keys and records to the same SQLite store as the CLI), **Compress** (with the same eval-suite regression guard), **Convert** (LangChain/LlamaIndex ⇄ `.prompt`), **Runs** (history, compare, markdown/PDF export), **Models** (cost-table freshness), and **Setup** (init scaffold, hook install) — every CLI command has a workspace tab.
 
 ---
 

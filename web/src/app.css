@@ -1,1 +1,153 @@
 @import "tailwindcss";
+
+:root {
+  --pd-bg: #f6f6f8;
+  --pd-bg-elevated: #ffffff;
+  --pd-bg-inset: #eef0f4;
+  --pd-border: #e0e2e8;
+  --pd-border-strong: #cbced8;
+  --pd-text: #17181c;
+  --pd-text-muted: #63666f;
+  --pd-text-faint: #90939c;
+  --pd-accent: #5b5bf0;
+  --pd-accent-hover: #4a4ae0;
+  --pd-accent-soft: #edecff;
+  --pd-accent-text: #4340d8;
+  --pd-good: #1a7f4f;
+  --pd-good-soft: #e5f6ee;
+  --pd-bad: #c22525;
+  --pd-bad-soft: #fdecec;
+  --pd-warn: #a3660a;
+  --pd-warn-soft: #fdf3e2;
+  --pd-shadow: 0 1px 2px rgba(20, 20, 30, 0.04), 0 8px 24px -12px rgba(20, 20, 30, 0.10);
+  --pd-radius: 10px;
+  --pd-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pd-bg: #131319;
+    --pd-bg-elevated: #1b1c24;
+    --pd-bg-inset: #101015;
+    --pd-border: #2b2c37;
+    --pd-border-strong: #3c3d4c;
+    --pd-text: #f0f0f4;
+    --pd-text-muted: #a4a6b3;
+    --pd-text-faint: #6d6f7c;
+    --pd-accent: #8785ff;
+    --pd-accent-hover: #9a98ff;
+    --pd-accent-soft: #232242;
+    --pd-accent-text: #b3b1ff;
+    --pd-good: #4fd48b;
+    --pd-good-soft: #113222;
+    --pd-bad: #ff6b6b;
+    --pd-bad-soft: #3a1717;
+    --pd-warn: #f0b429;
+    --pd-warn-soft: #3a2c0c;
+    --pd-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--pd-bg);
+  color: var(--pd-text);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--pd-accent-soft); color: var(--pd-accent-text); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--pd-border-strong); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--pd-text-faint); }
+
+.pd-card {
+  background: var(--pd-bg-elevated);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius);
+  box-shadow: var(--pd-shadow);
+}
+
+.pd-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pd-text-faint);
+}
+
+.pd-input, .pd-textarea, .pd-select {
+  background: var(--pd-bg-inset);
+  border: 1px solid var(--pd-border);
+  border-radius: 8px;
+  color: var(--pd-text);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.85rem;
+  width: 100%;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.pd-input:focus, .pd-textarea:focus, .pd-select:focus {
+  outline: none;
+  border-color: var(--pd-accent);
+  box-shadow: 0 0 0 3px var(--pd-accent-soft);
+}
+
+.pd-textarea {
+  font-family: var(--pd-font-mono);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.pd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--pd-border-strong);
+  background: var(--pd-bg-elevated);
+  color: var(--pd-text);
+  cursor: pointer;
+  transition: transform 80ms ease, border-color 120ms ease, background 120ms ease;
+}
+.pd-btn:hover { border-color: var(--pd-text-faint); }
+.pd-btn:active { transform: translateY(1px); }
+.pd-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.pd-btn-primary {
+  background: var(--pd-accent);
+  border-color: var(--pd-accent);
+  color: white;
+}
+.pd-btn-primary:hover { background: var(--pd-accent-hover); border-color: var(--pd-accent-hover); }
+
+.pd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+}
+.pd-badge-good { background: var(--pd-good-soft); color: var(--pd-good); }
+.pd-badge-bad { background: var(--pd-bad-soft); color: var(--pd-bad); }
+.pd-badge-warn { background: var(--pd-warn-soft); color: var(--pd-warn); }
+.pd-badge-neutral { background: var(--pd-bg-inset); color: var(--pd-text-muted); }
+
+.pd-mono { font-family: var(--pd-font-mono); }
+
+.pd-fade-in { animation: pd-fade-in 160ms ease; }
+@keyframes pd-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}

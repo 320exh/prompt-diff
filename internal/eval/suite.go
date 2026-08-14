@@ -27,12 +27,17 @@ func LoadSuite(path string) (*Suite, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ParseSuite(data, strings.TrimSuffix(path, ".json"))
+}
+
+// ParseSuite parses suite JSON, defaulting an empty name to fallbackName.
+func ParseSuite(data []byte, fallbackName string) (*Suite, error) {
 	var s Suite
 	if err := json.Unmarshal(data, &s); err != nil {
 		return nil, err
 	}
 	if s.Name == "" {
-		s.Name = strings.TrimSuffix(path, ".json")
+		s.Name = fallbackName
 	}
 	return &s, nil
 }

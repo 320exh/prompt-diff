@@ -111,3 +111,39 @@ func FromLlamaIndex(data []byte) (*prompt.Template, error) {
 		Body:      strings.TrimSpace(fromFString(li.Template, li.TemplateVars)),
 	}, nil
 }
+
+// Convert parses data as `from` and re-encodes it as `to`. Formats are
+// "prompt", "langchain", or "llamaindex". Shared by `prompt-diff convert`
+// and the web workspace.
+func Convert(data []byte, from, to string) ([]byte, error) {
+	var t *prompt.Template
+	var err error
+	switch from {
+	case "prompt":
+		t, err = prompt.Parse(data)
+	case "langchain":
+		t, err = FromLangChain(data)
+	case "llamaindex":
+		t, err = FromLlamaIndex(data)
+	default:
+		return nil, fmt.Errorf("unknown source format %q (want prompt, langchain, or llamaindex)", from)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("parsing as %s: %w", from, err)
+	}
+
+	switch to {
+	case "prompt":
+		rendered, rerr := prompt.Render(t, t.Body)
+		if rerr != nil {
+			return nil, fmt.Errorf("rendering .prompt: %w", rerr)
+		}
+		return []byte(rendered), nil
+	case "langchain":
+		return json.MarshalIndent(ToLangChain(t), "", "  ")
+	case "llamaindex":
+		return json.MarshalIndent(ToLlamaIndex(t), "", "  ")
+	default:
+		return nil, fmt.Errorf("unknown target format %q (want prompt, langchain, or llamaindex)", to)
+	}
+}
